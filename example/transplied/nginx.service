@@ -1,0 +1,10 @@
+[Unit]
+Description=NGINX Web
+After=network.target
+
+[Service]
+ExecStart=/usr/sbin/nginx -g 'daemon off;'
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target
