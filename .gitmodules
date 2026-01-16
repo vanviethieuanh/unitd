@@ -1,0 +1,4 @@
+[submodule "systemd-man"]
+	path = systemd-man
+	url = git@github.com:systemd/systemd.git
+	branch = main

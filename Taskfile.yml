@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: "3"
+
+tasks:
+  gen:
+    deps:
+      - for:
+          - automount
+          - device
+          - mount
+          - path
+          - scope
+          - service
+          - slice
+          - socket
+          - swap
+          - timer
+          - target
+          - unit
+        task: gen-file
+        vars:
+          UNIT: "{{ .ITEM }}"
+    cmds:
+      - gofmt -w .
+  gen-file:
+    internal: true
+    cmds:
+      - go run ./cmd/gen --man systemd.{{.UNIT}} > ./configs/{{.UNIT}}.go
