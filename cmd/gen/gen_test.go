@@ -40,24 +40,3 @@ func TestToSnakeCase(t *testing.T) {
 		}
 	}
 }
-
-func Test_gen(t *testing.T) {
-	tests := []struct {
-		name string // description of this test case
-		// Named input parameters for target function.
-		u         *Unit
-		propTypes map[DirectiveIdentifier]string
-		want      string
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := gen(tt.u, tt.propTypes)
-			// TODO: update the condition below to compare got with tt.want.
-			if true {
-				t.Errorf("gen() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}

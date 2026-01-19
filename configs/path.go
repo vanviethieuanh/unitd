@@ -1,34 +1,34 @@
+// Generated based on man page systemd.path of systemd
+
 package configs
 
-// PathBlock represents the [Path] section of a systemd unit.
+import (
+	"github.com/hashicorp/hcl/v2"
+	"os"
+)
+
+// PathBlock is for [Path] systemd unit block
 //
 // A unit configuration file whose name ends in encodes information about a path monitored by systemd,
-// for path-based activation.
-//
-// This man page lists the configuration options specific to this unit type. See for the common options
-// of all unit configuration files. The common configuration items are configured in the generic [Unit]
-// and [Install] sections. The path specific configuration options are configured in the [Path]
-// section.
-//
-// For each path file, a matching unit file must exist, describing the unit to activate when the path
-// changes. By default, a service by the same name as the path (except for the suffix) is activated.
-// Example: a path file activates a matching service . The unit to activate may be controlled by (see
-// below).
-//
-// Internally, path units use the API to monitor file systems. Due to that, it suffers by the same
-// limitations as inotify, and for example cannot be used to monitor files or directories changed by
-// other machines on remote NFS file systems.
-//
-// When a service unit triggered by a path unit terminates (regardless whether it exited successfully
-// or failed), monitored paths are checked immediately again, and the service accordingly restarted
-// instantly. As protection against busy looping in this trigger/start cycle, a start rate limit is
-// enforced on the service unit, see and in . Unlike other service failures, the error condition that
-// the start rate limit is hit is propagated from the service unit to the path unit and causes the path
-// unit to fail as well, thus ending the loop.
+// for path-based activation. This man page lists the configuration options specific to this unit type.
+// See for the common options of all unit configuration files. The common configuration items are
+// configured in the generic [Unit] and [Install] sections. The path specific configuration options are
+// configured in the [Path] section. For each path file, a matching unit file must exist, describing
+// the unit to activate when the path changes. By default, a service by the same name as the path
+// (except for the suffix) is activated. Example: a path file activates a matching service . The unit
+// to activate may be controlled by (see below). Internally, path units use the API to monitor file
+// systems. Due to that, it suffers by the same limitations as inotify, and for example cannot be used
+// to monitor files or directories changed by other machines on remote NFS file systems. When a service
+// unit triggered by a path unit terminates (regardless whether it exited successfully or failed),
+// monitored paths are checked immediately again, and the service accordingly restarted instantly. As
+// protection against busy looping in this trigger/start cycle, a start rate limit is enforced on the
+// service unit, see and in . Unlike other service failures, the error condition that the start rate
+// limit is hit is propagated from the service unit to the path unit and causes the path unit to fail
+// as well, thus ending the loop.
 type PathBlock struct {
 	// If MakeDirectory= is enabled, use the mode specified here to create the directories in question.
 	// Takes an access mode in octal notation. Defaults to 0755.
-	DirectoryMode string `hcl:"directory_mode,optional" systemd:"DirectoryMode"`
+	DirectoryMode os.FileMode `unitd:"directory_mode,optional" systemd:"DirectoryMode"`
 	// Defines paths to monitor for certain changes: PathExists= may be used to watch the mere existence of
 	// a file or directory. If the file specified exists, the configured unit is activated. PathExistsGlob=
 	// works similarly, but checks for the existence of at least one file matching the globbing pattern
@@ -176,7 +176,7 @@ type PathBlock struct {
 	// 200. Set either to 0 to disable any form of trigger rate limiting. If the limit is hit, the unit is
 	// placed into a failure mode, and will not watch the paths anymore until restarted. Note that this
 	// limit is enforced before the service activation is enqueued.
-	TriggerLimitBurst int `hcl:"trigger_limit_burst,optional" systemd:"TriggerLimitBurst"`
+	TriggerLimitBurst uint64 `hcl:"trigger_limit_burst,optional" systemd:"TriggerLimitBurst"`
 	// Configures a limit on how often this path unit may be activated within a specific time interval. The
 	// TriggerLimitIntervalSec= may be used to configure the length of the time interval in the usual time
 	// units us, ms, s, min, h, … and defaults to 2s. See
@@ -191,7 +191,7 @@ type PathBlock struct {
 	// suffix is not .path. If not specified, this value defaults to a service that has the same name as
 	// the path unit, except for the suffix. (See above.) It is recommended that the unit name that is
 	// activated and the unit name of the path unit are named identical, except for the suffix.
-	Unit string `hcl:"unit,optional" systemd:"Unit"`
+	Unit hcl.Traversal `unitd:"unit,optional" systemd:"Unit"`
 }
 
 type Path struct {

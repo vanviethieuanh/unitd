@@ -1,26 +1,29 @@
+// Generated based on man page systemd.service of systemd
+
 package configs
 
-// ServiceBlock represents the [Service] section of a systemd unit.
+import (
+	"syscall"
+)
+
+// ServiceBlock is for [Service] systemd unit block
 //
 // A unit configuration file whose name ends in encodes information about a process controlled and
-// supervised by systemd.
-//
-// This man page lists the configuration options specific to this unit type. See for the common options
-// of all unit configuration files. The common configuration items are configured in the generic [Unit]
-// and [Install] sections. The service specific configuration options are configured in the [Service]
-// section.
-//
-// Additional options are listed in , which define the execution environment the commands are executed
-// in, and in , which define the way the processes of the service are terminated, and in , which
-// configure resource control settings for the processes of the service.
-//
-// The command allows creating and units dynamically and transiently from the command line.
+// supervised by systemd. This man page lists the configuration options specific to this unit type. See
+// for the common options of all unit configuration files. The common configuration items are
+// configured in the generic [Unit] and [Install] sections. The service specific configuration options
+// are configured in the [Service] section. Additional options are listed in , which define the
+// execution environment the commands are executed in, and in , which define the way the processes of
+// the service are terminated, and in , which configure resource control settings for the processes of
+// the service. The command allows creating and units dynamically and transiently from the command
+// line.
 type ServiceBlock struct {
 	// Takes a D-Bus destination name that this service shall use. This option is mandatory for services
 	// where Type= is set to dbus. It is recommended to always set this property if known to make it easy
 	// to map the service name to the D-Bus destination. In particular, systemctl
 	// service-log-level/service-log-target verbs make use of this.
-	BusName string `hcl:"bus_name,optional" systemd:"BusName"`
+	BusName   string `hcl:"bus_name,optional" systemd:"BusName"`
+	BusPolicy string `hcl:"bus_policy,optional" systemd:"BusPolicy"`
 	// Optional commands that are executed before the commands in ExecStartPre=. Syntax is the same as for
 	// ExecStart=. Multiple command lines are allowed, regardless of the service type (i.e. Type=), and the
 	// commands are executed one after the other, serially.
@@ -36,7 +39,7 @@ type ServiceBlock struct {
 	// ExecCondition=. ExecCondition= will also run the commands in ExecStopPost=, as part of stopping the
 	// service, in the case of any non-zero or abnormal exits, like the ones described above.
 	//
-	ExecCondition []string `hcl:"exec_condition,optional" systemd:"ExecCondition"`
+	ExecCondition [][]string `hcl:"exec_condition,optional" systemd:"ExecCondition"`
 	// Commands to execute to trigger a configuration reload in the service. This setting may take multiple
 	// command lines, following the same scheme as described for ExecStart= above. Use of this setting is
 	// optional. Specifier and environment variable substitution is supported here following the same
@@ -59,10 +62,10 @@ type ServiceBlock struct {
 	// is received before ExecReload= completes, the signaling is skipped and the service manager
 	// immediately starts listening for READY=1.
 	//
-	ExecReload []string `hcl:"exec_reload,optional" systemd:"ExecReload"`
+	ExecReload [][]string `hcl:"exec_reload,optional" systemd:"ExecReload"`
 	// Commands to execute after a successful reload operation. Syntax for this setting is exactly the same
 	// as ExecReload=.
-	ExecReloadPost []string `hcl:"exec_reload_post,optional" systemd:"ExecReloadPost"`
+	ExecReloadPost [][]string `hcl:"exec_reload_post,optional" systemd:"ExecReloadPost"`
 	// Commands that are executed when this service is started.
 	//
 	// Unless Type= is oneshot, exactly one command must be given. When Type=oneshot is used, this setting
@@ -78,7 +81,7 @@ type ServiceBlock struct {
 	// Unless Type=forking is set, the process started via this command line will be considered the main
 	// process of the daemon.
 	//
-	ExecStart []string `hcl:"exec_start,optional" systemd:"ExecStart"`
+	ExecStart [][]string `hcl:"exec_start,optional" systemd:"ExecStart"`
 	// Additional commands that are executed before or after the command in ExecStart=, respectively.
 	// Syntax is the same as for ExecStart=. Multiple command lines are allowed, regardless of the service
 	// type (i.e. Type=), and the commands are executed one after the other, serially.
@@ -105,7 +108,7 @@ type ServiceBlock struct {
 	// Note that the execution of ExecStartPost= is taken into account for the purpose of Before=/After=
 	// ordering constraints.
 	//
-	ExecStartPost []string `hcl:"exec_start_post,optional" systemd:"ExecStartPost"`
+	ExecStartPost [][]string `hcl:"exec_start_post,optional" systemd:"ExecStartPost"`
 	// Additional commands that are executed before or after the command in ExecStart=, respectively.
 	// Syntax is the same as for ExecStart=. Multiple command lines are allowed, regardless of the service
 	// type (i.e. Type=), and the commands are executed one after the other, serially.
@@ -132,7 +135,7 @@ type ServiceBlock struct {
 	// Note that the execution of ExecStartPost= is taken into account for the purpose of Before=/After=
 	// ordering constraints.
 	//
-	ExecStartPre []string `hcl:"exec_start_pre,optional" systemd:"ExecStartPre"`
+	ExecStartPre [][]string `hcl:"exec_start_pre,optional" systemd:"ExecStartPre"`
 	// Commands to execute to stop the service started via ExecStart=. This argument takes multiple command
 	// lines, following the same scheme as described for ExecStart= above. Use of this setting is optional.
 	// After the commands configured in this option are run, it is implied that the service is stopped, and
@@ -165,7 +168,7 @@ type ServiceBlock struct {
 	// It is recommended to use this setting for commands that communicate with the service requesting
 	// clean termination. For post-mortem clean-up steps use ExecStopPost= instead.
 	//
-	ExecStop []string `hcl:"exec_stop,optional" systemd:"ExecStop"`
+	ExecStop [][]string `hcl:"exec_stop,optional" systemd:"ExecStop"`
 	// Additional commands that are executed after the service is stopped. This includes cases where the
 	// commands configured in ExecStop= were used, where the service does not have any ExecStop= defined,
 	// or where the service exited unexpectedly. This argument takes multiple command lines, following the
@@ -189,7 +192,7 @@ type ServiceBlock struct {
 	// Note that the execution of ExecStopPost= is taken into account for the purpose of Before=/After=
 	// ordering constraints.
 	//
-	ExecStopPost []string `hcl:"exec_stop_post,optional" systemd:"ExecStopPost"`
+	ExecStopPost [][]string `hcl:"exec_stop_post,optional" systemd:"ExecStopPost"`
 	// Specifies when the manager should consider the service to be finished. One of main or cgroup:
 	//
 	// It is generally recommended to use ExitType=main when a service has a known forking model and a main
@@ -198,7 +201,8 @@ type ServiceBlock struct {
 	// transient or automatically generated services, such as graphical applications inside of a desktop
 	// environment.
 	//
-	ExitType string `hcl:"exit_type,optional" systemd:"ExitType"`
+	ExitType      int    `hcl:"exit_type,optional" systemd:"ExitType"`
+	FailureAction string `hcl:"failure_action,optional" systemd:"FailureAction"`
 	// Configure how many file descriptors may be stored in the service manager for the service using
 	// <citerefentry><refentrytitle>sd_pid_notify_with_fds</refentrytitle><manvolnum>3</manvolnum></citerefentry>'s
 	// FDSTORE=1 messages. This is useful for implementing services that can restart after an explicit
@@ -235,7 +239,7 @@ type ServiceBlock struct {
 	// For further information on the file descriptor store see the <ulink
 	// url="https://systemd.io/FILE_DESCRIPTOR_STORE">File Descriptor Store</ulink> overview.
 	//
-	FileDescriptorStoreMax int `hcl:"file_descriptor_store_max,optional" systemd:"FileDescriptorStoreMax"`
+	FileDescriptorStoreMax uint64 `hcl:"file_descriptor_store_max,optional" systemd:"FileDescriptorStoreMax"`
 	// Takes one of no, yes, restart and controls when to release the service's file descriptor store (i.e.
 	// when to close the contained file descriptors, if any). If set to no the file descriptor store is
 	// automatically released when the service is stopped; if restart (the default) it is kept around as
@@ -246,7 +250,7 @@ type ServiceBlock struct {
 	//
 	// Use systemctl clean --what=fdstore … to release the file descriptor store explicitly.
 	//
-	FileDescriptorStorePreserve []string `hcl:"file_descriptor_store_preserve,optional" systemd:"FileDescriptorStorePreserve"`
+	FileDescriptorStorePreserve string `hcl:"file_descriptor_store_preserve,optional" systemd:"FileDescriptorStorePreserve"`
 	// Takes a boolean value that specifies whether systemd should try to guess the main PID of a service
 	// if it cannot be determined reliably. This option is ignored unless Type=forking is set and PIDFile=
 	// is unset because for the other types or with an explicitly configured PID file, the main PID is
@@ -369,14 +373,17 @@ type ServiceBlock struct {
 	// Type=simple where possible, which does not require use of PID files to determine the main process of
 	// a service and avoids needless forking.
 	//
-	PIDFile string `hcl:"pid_file,optional" systemd:"PIDFile"`
+	PIDFile              string `hcl:"pid_file,optional" systemd:"PIDFile"`
+	PermissionsStartOnly bool   `hcl:"permissions_start_only,optional" systemd:"PermissionsStartOnly"`
+	RebootArgument       string `hcl:"reboot_argument,optional" systemd:"RebootArgument"`
 	// Configures the UNIX process signal to send to the service's main process when asked to reload the
 	// service's configuration. Defaults to SIGHUP. This option has no effect unless Type=notify-reload is
 	// used, see above.
-	ReloadSignal string `hcl:"reload_signal,optional" systemd:"ReloadSignal"`
+	ReloadSignal syscall.Signal `unitd:"reload_signal,optional" systemd:"ReloadSignal"`
 	// Takes a boolean value that specifies whether the service shall be considered active even when all
 	// its processes exited. Defaults to no.
-	RemainAfterExit bool `hcl:"remain_after_exit,optional" systemd:"RemainAfterExit"`
+	RemainAfterExit bool   `hcl:"remain_after_exit,optional" systemd:"RemainAfterExit"`
+	Restart         string `hcl:"restart,optional" systemd:"Restart"`
 	// Takes a list of exit status definitions that, when returned by the main service process, will force
 	// automatic service restarts, regardless of the restart setting configured with Restart=. The argument
 	// format is similar to RestartPreventExitStatus=.
@@ -433,7 +440,7 @@ type ServiceBlock struct {
 	//
 	// This setting is effective only if RestartMaxDelaySec= is also set and RestartSec= is not zero.
 	//
-	RestartSteps int `hcl:"restart_steps,optional" systemd:"RestartSteps"`
+	RestartSteps uint64 `hcl:"restart_steps,optional" systemd:"RestartSteps"`
 	// Takes a boolean argument. If true, the root directory, as configured with the RootDirectory= option
 	// (see
 	// <citerefentry><refentrytitle>systemd.exec</refentrytitle><manvolnum>5</manvolnum></citerefentry> for
@@ -476,7 +483,10 @@ type ServiceBlock struct {
 	// once set, clearing the list of sockets again (for example, by assigning the empty string to this
 	// option) is not supported.
 	//
-	Sockets []string `hcl:"sockets,optional" systemd:"Sockets"`
+	Sockets            []string `hcl:"sockets,optional" systemd:"Sockets"`
+	StartLimitAction   string   `hcl:"start_limit_action,optional" systemd:"StartLimitAction"`
+	StartLimitBurst    uint64   `hcl:"start_limit_burst,optional" systemd:"StartLimitBurst"`
+	StartLimitInterval int      `hcl:"start_limit_interval,optional" systemd:"StartLimitInterval"`
 	// Takes a list of exit status definitions that, when returned by the main service process, will be
 	// considered successful termination, in addition to the normal successful exit status 0 and, except
 	// for Type=oneshot, the signals SIGHUP, SIGINT, SIGTERM, and SIGPIPE. Exit status definitions can be
@@ -502,6 +512,7 @@ type ServiceBlock struct {
 	// status values and names.
 	//
 	SuccessExitStatus string `hcl:"success_exit_status,optional" systemd:"SuccessExitStatus"`
+	SysVStartPriority string `hcl:"sys_v_start_priority,optional" systemd:"SysVStartPriority"`
 	// This option configures the time to wait for the service to terminate when it was aborted due to a
 	// watchdog timeout (see WatchdogSec=). If the service has a short TimeoutStopSec= this option can be
 	// used to give the system more time to write a core dump of the service. Upon expiration the service
@@ -525,7 +536,7 @@ type ServiceBlock struct {
 	// interval specified, or terminates itself (see
 	// <citerefentry><refentrytitle>sd_notify</refentrytitle><manvolnum>3</manvolnum></citerefentry>).
 	//
-	TimeoutAbortSec int `hcl:"timeout_abort_sec,optional" systemd:"TimeoutAbortSec"`
+	TimeoutAbortSec string `hcl:"timeout_abort_sec,optional" systemd:"TimeoutAbortSec"`
 	// A shorthand for configuring both TimeoutStartSec= and TimeoutStopSec= to the specified value.
 	TimeoutSec int `hcl:"timeout_sec,optional" systemd:"TimeoutSec"`
 	// These options configure the action that is taken in case a daemon service does not signal start-up
@@ -541,7 +552,7 @@ type ServiceBlock struct {
 	// using kill the service is immediately terminated by sending FinalKillSignal= without any further
 	// timeout. This setting can be used to expedite the shutdown of failing services.
 	//
-	TimeoutStartFailureMode int `hcl:"timeout_start_failure_mode,optional" systemd:"TimeoutStartFailureMode"`
+	TimeoutStartFailureMode string `hcl:"timeout_start_failure_mode,optional" systemd:"TimeoutStartFailureMode"`
 	// Configures the time to wait for start-up. If a daemon service does not signal start-up completion
 	// within the configured time, the service will be considered failed and will be shut down again. The
 	// precise action depends on the TimeoutStartFailureMode= option. Takes a unit-less value in seconds,
@@ -578,7 +589,7 @@ type ServiceBlock struct {
 	// using kill the service is immediately terminated by sending FinalKillSignal= without any further
 	// timeout. This setting can be used to expedite the shutdown of failing services.
 	//
-	TimeoutStopFailureMode int `hcl:"timeout_stop_failure_mode,optional" systemd:"TimeoutStopFailureMode"`
+	TimeoutStopFailureMode string `hcl:"timeout_stop_failure_mode,optional" systemd:"TimeoutStopFailureMode"`
 	// This option serves two purposes. First, it configures the time to wait for each ExecStop= command.
 	// If any of them times out, subsequent ExecStop= commands are skipped and the service will be
 	// terminated by SIGTERM. If no ExecStop= commands are specified, the service gets the SIGTERM
@@ -598,7 +609,7 @@ type ServiceBlock struct {
 	// EXTEND_TIMEOUT_USEC=… within the interval specified, or terminates itself (see
 	// <citerefentry><refentrytitle>sd_notify</refentrytitle><manvolnum>3</manvolnum></citerefentry>).
 	//
-	TimeoutStopSec int `hcl:"timeout_stop_sec,optional" systemd:"TimeoutStopSec"`
+	TimeoutStopSec string `hcl:"timeout_stop_sec,optional" systemd:"TimeoutStopSec"`
 	// Configures the mechanism via which the service notifies the manager that the service start-up has
 	// finished. One of simple, exec, forking, oneshot, dbus, notify, notify-reload, or idle:
 	//

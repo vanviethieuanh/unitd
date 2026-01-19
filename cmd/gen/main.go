@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/charmbracelet/log"
 )
@@ -19,26 +20,33 @@ func main() {
 		log.Fatal("--man is required (e.g. --man systemd.timer)")
 	}
 
-	propTypes := getDirectives()
-	if *man == "systemd.unit" {
-		fmt.Print(genCommon(propTypes))
-		return
-	}
-
-	path := filepath.Join(
-		".",
-		"systemd-man",
-		"man",
-		*man+".xml",
-	)
-
-	f, err := os.Open(path)
+	fragPath := filepath.Join("out", "directives.jsonl")
+	f, err := os.Open(fragPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer f.Close()
 
-	unit := parseUnit(f)
+	directives := getDirectives(f)
+	if *man == "systemd.unit" {
+		fmt.Print(genCommon(directives))
+		return
+	}
+
+	path := filepath.Join(
+		".",
+		"systemd",
+		"man",
+		*man+".xml",
+	)
+
+	f, err = os.Open(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+
+	unit := parseUnit(f, directives)
 
 	if *outputJSON {
 		enc := json.NewEncoder(os.Stdout)
@@ -47,7 +55,14 @@ func main() {
 			log.Fatal(err)
 		}
 	} else {
-		code := gen(&unit, propTypes)
-		fmt.Print(code)
+		var code strings.Builder
+
+		fmt.Fprintf(&code, "// Generated based on man page %s of systemd\n\n", *man)
+		code.WriteString("package configs\n\n")
+		unitCode, imports := GenerateUnitCode(unit)
+		writeImports(&code, imports.Sorted())
+		code.WriteString(unitCode)
+
+		fmt.Print(code.String())
 	}
 }

@@ -1,26 +1,22 @@
+// Generated based on man page systemd.swap of systemd
+
 package configs
 
-// SwapBlock represents the [Swap] section of a systemd unit.
+// SwapBlock is for [Swap] systemd unit block
 //
 // A unit configuration file whose name ends in encodes information about a swap device or file for
-// memory paging controlled and supervised by systemd.
-//
-// This man page lists the configuration options specific to this unit type. See for the common options
-// of all unit configuration files. The common configuration items are configured in the generic [Unit]
-// and [Install] sections. The swap specific configuration options are configured in the [Swap]
-// section.
-//
-// Additional options are listed in , which define the execution environment the program is executed
-// in, in , which define the way these processes are terminated, and in , which configure resource
-// control settings for these processes of the unit.
-//
-// Swap units must be named after the devices or files they control. Example: the swap device must be
-// configured in a unit file . For details about the escaping logic used to convert a file system path
-// to a unit name, see . Note that swap units cannot be templated, nor is possible to add multiple
-// names to a swap unit by creating additional symlinks to it.
-//
-// Note that swap support on Linux is privileged, swap units are hence only available in the system
-// service manager (and root's user service manager), but not in unprivileged user's service manager.
+// memory paging controlled and supervised by systemd. This man page lists the configuration options
+// specific to this unit type. See for the common options of all unit configuration files. The common
+// configuration items are configured in the generic [Unit] and [Install] sections. The swap specific
+// configuration options are configured in the [Swap] section. Additional options are listed in , which
+// define the execution environment the program is executed in, in , which define the way these
+// processes are terminated, and in , which configure resource control settings for these processes of
+// the unit. Swap units must be named after the devices or files they control. Example: the swap device
+// must be configured in a unit file . For details about the escaping logic used to convert a file
+// system path to a unit name, see . Note that swap units cannot be templated, nor is possible to add
+// multiple names to a swap unit by creating additional symlinks to it. Note that swap support on Linux
+// is privileged, swap units are hence only available in the system service manager (and root's user
+// service manager), but not in unprivileged user's service manager.
 type SwapBlock struct {
 	// May contain an option string for the swap device. This may be used for controlling discard options
 	// among other functionality, if the swap backing device supports the discard or trim operation. (See
@@ -31,7 +27,7 @@ type SwapBlock struct {
 	Options string `hcl:"options,optional" systemd:"Options"`
 	// Swap priority to use when activating the swap device or file. This takes an integer. This setting is
 	// optional and ignored when the priority is set by pri= in the Options= key.
-	Priority int `hcl:"priority,optional" systemd:"Priority"`
+	Priority string `hcl:"priority,optional" systemd:"Priority"`
 	// Configures the time to wait for the swapon command to finish. If a command does not exit within the
 	// configured time, the swap will be considered failed and be shut down again. All commands still
 	// running will be terminated forcibly via SIGTERM, and after another delay of this time with SIGKILL.
@@ -40,7 +36,7 @@ type SwapBlock struct {
 	// Takes a unit-less value in seconds, or a time span value such as "5min 20s". Pass 0 to disable the
 	// timeout logic. Defaults to DefaultTimeoutStartSec= from the manager configuration file (see
 	// <citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>).
-	TimeoutSec int `hcl:"timeout_sec,optional" systemd:"TimeoutSec"`
+	TimeoutSec string `hcl:"timeout_sec,optional" systemd:"TimeoutSec"`
 	// Takes an absolute path or a fstab-style identifier of a device node or file to use for paging. See
 	// <citerefentry
 	// project='man-pages'><refentrytitle>swapon</refentrytitle><manvolnum>8</manvolnum></citerefentry> for

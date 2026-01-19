@@ -1,10 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 
 	"github.com/hashicorp/hcl/v2/hclsimple"
 	"github.com/vanviethieuanh/unitd/configs"
@@ -25,20 +23,20 @@ func main() {
 		log.Fatal(err)
 	}
 
-	for _, service := range config.Services {
-		u, err := service.Encode()
-		if err != nil {
-			panic(err)
-		}
-
-		s := u.ToString()
-
-		path := filepath.Join(outDir, service.Name+".service")
-
-		if err := os.WriteFile(path, []byte(s), 0o644); err != nil {
-			panic(err)
-		}
-
-		fmt.Println("wrote", path)
-	}
+	// for _, service := range config.Services {
+	// 	u, err := service.Encode()
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	//
+	// 	s := u.ToString()
+	//
+	// 	path := filepath.Join(outDir, service.Name+".service")
+	//
+	// 	if err := os.WriteFile(path, []byte(s), 0o644); err != nil {
+	// 		panic(err)
+	// 	}
+	//
+	// 	fmt.Println("wrote", path)
+	// }
 }

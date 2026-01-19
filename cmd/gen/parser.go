@@ -8,14 +8,6 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-type Unit struct {
-	Name        string            `json:"name"`
-	Title       string            `json:"title"`
-	Purpose     string            `json:"purpose"`
-	Description string            `json:"description"`
-	Options     map[string]string `json:"options"`
-}
-
 type RefEntry struct {
 	XMLName  xml.Name   `xml:"refentry"`
 	Meta     RefMeta    `xml:"refmeta"`
@@ -77,7 +69,7 @@ type Entry struct {
 	Content string `xml:",innerxml"`
 }
 
-func parseUnit(r io.Reader) Unit {
+func parseUnit(r io.Reader, directivesList []Directive) *Unit {
 	data, err := io.ReadAll(r)
 	if err != nil {
 		log.Fatal(err)
@@ -88,12 +80,32 @@ func parseUnit(r io.Reader) Unit {
 		log.Fatal(err)
 	}
 
-	return Unit{
+	unitName := parseName(refEntry)
+
+	var options []Directive
+	parsedOptions := parseOptions(refEntry)
+	seen := make(map[string]struct{})
+	for _, d := range directivesList {
+		if !strings.EqualFold(d.Identifier.Section, unitName) {
+			continue
+		}
+
+		key := d.Identifier.Key
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+
+		d.Description = parsedOptions[key]
+		options = append(options, d)
+	}
+
+	return &Unit{
 		Name:        parseName(refEntry),
 		Title:       parseTitle(refEntry),
 		Purpose:     parsePurpose(refEntry),
 		Description: parseDescription(refEntry),
-		Options:     parseOptions(refEntry),
+		Options:     options,
 	}
 }
 

@@ -1,27 +1,29 @@
+// Generated based on man page systemd.timer of systemd
+
 package configs
 
-// TimerBlock represents the [Timer] section of a systemd unit.
+import (
+	"github.com/hashicorp/hcl/v2"
+	"time"
+)
+
+// TimerBlock is for [Timer] systemd unit block
 //
 // A unit configuration file whose name ends in encodes information about a timer controlled and
-// supervised by systemd, for timer-based activation.
-//
-// This man page lists the configuration options specific to this unit type. See for the common options
-// of all unit configuration files. The common configuration items are configured in the generic [Unit]
-// and [Install] sections. The timer specific configuration options are configured in the [Timer]
-// section.
-//
-// For each timer file, a matching unit file must exist, describing the unit to activate when the timer
-// elapses. By default, a service by the same name as the timer (except for the suffix) is activated.
-// Example: a timer file activates a matching service . The unit to activate may be controlled by (see
-// below).
-//
-// Note that in case the unit to activate is already active at the time the timer elapses it is not
-// restarted, but simply left running. There is no concept of spawning new service instances in this
-// case. Due to this, services with set (which stay around continuously even after the service's main
-// process exited) are usually not suitable for activation via repetitive timers, as they will only be
-// activated once, and then stay around forever. Target units, which by default do not deactivate on
-// their own, can be activated repeatedly by timers by setting on them. This will cause a target unit
-// to be stopped immediately after its activation, if it is not a dependency of another running unit.
+// supervised by systemd, for timer-based activation. This man page lists the configuration options
+// specific to this unit type. See for the common options of all unit configuration files. The common
+// configuration items are configured in the generic [Unit] and [Install] sections. The timer specific
+// configuration options are configured in the [Timer] section. For each timer file, a matching unit
+// file must exist, describing the unit to activate when the timer elapses. By default, a service by
+// the same name as the timer (except for the suffix) is activated. Example: a timer file activates a
+// matching service . The unit to activate may be controlled by (see below). Note that in case the unit
+// to activate is already active at the time the timer elapses it is not restarted, but simply left
+// running. There is no concept of spawning new service instances in this case. Due to this, services
+// with set (which stay around continuously even after the service's main process exited) are usually
+// not suitable for activation via repetitive timers, as they will only be activated once, and then
+// stay around forever. Target units, which by default do not deactivate on their own, can be activated
+// repeatedly by timers by setting on them. This will cause a target unit to be stopped immediately
+// after its activation, if it is not a dependency of another running unit.
 type TimerBlock struct {
 	// Specify the accuracy the timer shall elapse with. Defaults to 1min. The timer is scheduled to elapse
 	// within a time window starting with the time specified in OnCalendar=, OnActiveSec=, OnBootSec=,
@@ -68,10 +70,10 @@ type TimerBlock struct {
 	//
 	FixedRandomDelay bool `hcl:"fixed_random_delay,optional" systemd:"FixedRandomDelay"`
 	// Defines a timer relative to the moment the timer unit itself is activated.
-	OnActiveSec []string `hcl:"on_active_sec,optional" systemd:"OnActiveSec"`
+	OnActiveSec time.Duration `unitd:"on_active_sec,optional" systemd:"OnActiveSec"`
 	// Defines a timer relative to when the machine was booted up. In containers, for the system manager
 	// instance, this is mapped to OnStartupSec=, making both equivalent.
-	OnBootSec []string `hcl:"on_boot_sec,optional" systemd:"OnBootSec"`
+	OnBootSec time.Duration `unitd:"on_boot_sec,optional" systemd:"OnBootSec"`
 	// Defines realtime (i.e. wallclock) timers with calendar event expressions. See
 	// <citerefentry><refentrytitle>systemd.time</refentrytitle><manvolnum>7</manvolnum></citerefentry> for
 	// more information on the syntax of calendar event expressions. Otherwise, the semantics are similar
@@ -103,7 +105,7 @@ type TimerBlock struct {
 	// cause the system to wake up (under the condition the system's hardware supports time-triggered
 	// wake-up functionality).
 	//
-	OnCalendar []string `hcl:"on_calendar,optional" systemd:"OnCalendar"`
+	OnCalendar time.Duration `unitd:"on_calendar,optional" systemd:"OnCalendar"`
 	// These options take boolean arguments. When true, the service unit will be triggered when the system
 	// clock (CLOCK_REALTIME) jumps relative to the monotonic clock (CLOCK_MONOTONIC), or when the local
 	// system timezone is modified. These options can be used alone or in combination with other timer
@@ -113,16 +115,16 @@ type TimerBlock struct {
 	// is very similar to OnBootSec= as the system service manager is generally started very early at boot.
 	// It's primarily useful when configured in units running in the per-user service manager, as the user
 	// service manager is generally started on first login only, not already during boot.
-	OnStartupSec []string `hcl:"on_startup_sec,optional" systemd:"OnStartupSec"`
+	OnStartupSec time.Duration `unitd:"on_startup_sec,optional" systemd:"OnStartupSec"`
 	// These options take boolean arguments. When true, the service unit will be triggered when the system
 	// clock (CLOCK_REALTIME) jumps relative to the monotonic clock (CLOCK_MONOTONIC), or when the local
 	// system timezone is modified. These options can be used alone or in combination with other timer
 	// expressions (see above) within the same timer unit. These options default to false.
 	OnTimezoneChange bool `hcl:"on_timezone_change,optional" systemd:"OnTimezoneChange"`
 	// Defines a timer relative to when the unit the timer unit is activating was last activated.
-	OnUnitActiveSec []string `hcl:"on_unit_active_sec,optional" systemd:"OnUnitActiveSec"`
+	OnUnitActiveSec time.Duration `unitd:"on_unit_active_sec,optional" systemd:"OnUnitActiveSec"`
 	// Defines a timer relative to when the unit the timer unit is activating was last deactivated.
-	OnUnitInactiveSec []string `hcl:"on_unit_inactive_sec,optional" systemd:"OnUnitInactiveSec"`
+	OnUnitInactiveSec time.Duration `unitd:"on_unit_inactive_sec,optional" systemd:"OnUnitInactiveSec"`
 	// Takes a boolean argument. If true, the time when the service unit was last triggered is stored on
 	// disk. When the timer is activated, the service unit is triggered immediately if it would have been
 	// triggered at least once during the time when the timer was inactive. Such triggering is nonetheless
@@ -192,7 +194,7 @@ type TimerBlock struct {
 	// .timer. If not specified, this value defaults to a service that has the same name as the timer unit,
 	// except for the suffix. (See above.) It is recommended that the unit name that is activated and the
 	// unit name of the timer unit are named identically, except for the suffix.
-	Unit string `hcl:"unit,optional" systemd:"Unit"`
+	Unit hcl.Traversal `unitd:"unit,optional" systemd:"Unit"`
 	// Takes a boolean argument. If true, an elapsing timer will cause the system to resume from suspend,
 	// should it be suspended and if the system supports this. Note that this option will only make sure
 	// the system resumes on the appropriate times, it will not take care of suspending it again after any

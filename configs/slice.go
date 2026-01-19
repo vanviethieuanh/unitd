@@ -1,6 +1,8 @@
+// Generated based on man page systemd.slice of systemd
+
 package configs
 
-// SliceBlock represents the [Slice] section of a systemd unit.
+// SliceBlock is for [Slice] systemd unit block
 //
 // A unit configuration file whose name ends in encodes information about a slice unit. A slice unit is
 // a concept for hierarchically managing resources of a group of processes. This management is
@@ -10,20 +12,14 @@ package configs
 // are organized hierarchically in a tree. The name of the slice encodes the location in the tree. The
 // name consists of a dash-separated series of names, which describes the path to the slice from the
 // root slice. The root slice is named . Example: is a slice that is located within , which in turn is
-// located in the root slice .
-//
-// Note that slice units cannot be templated, nor is possible to add multiple names to a slice unit by
-// creating additional symlinks to its unit file.
-//
-// By default, service and scope units are placed in , virtual machines and containers registered with
-// are found in , and user sessions handled by in . See for more information.
-//
-// See for the common options of all unit configuration files. The common configuration items are
-// configured in the generic [Unit] and [Install] sections. The slice specific configuration options
-// are configured in the [Slice] section. Currently, only generic resource control settings as
-// described in are allowed.
-//
-// See the for an introduction on how to make use of slice units from programs.
+// located in the root slice . Note that slice units cannot be templated, nor is possible to add
+// multiple names to a slice unit by creating additional symlinks to its unit file. By default, service
+// and scope units are placed in , virtual machines and containers registered with are found in , and
+// user sessions handled by in . See for more information. See for the common options of all unit
+// configuration files. The common configuration items are configured in the generic [Unit] and
+// [Install] sections. The slice specific configuration options are configured in the [Slice] section.
+// Currently, only generic resource control settings as described in are allowed. See the for an
+// introduction on how to make use of slice units from programs.
 type SliceBlock struct {
 	// Configures a hard and a soft limit on the maximum number of units assigned to this slice (or any
 	// descendent slices) that may be active at the same time. If the hard limit is reached no further
@@ -46,7 +42,7 @@ type SliceBlock struct {
 	// hierarchy the limit must provide room for both the payload units (i.e. services, mounts, …) and
 	// structural units (i.e. slice units), if any are defined.
 	//
-	ConcurrencyHardMax int `hcl:"concurrency_hard_max,optional" systemd:"ConcurrencyHardMax"`
+	ConcurrencyHardMax string `hcl:"concurrency_hard_max,optional" systemd:"ConcurrencyHardMax"`
 	// Configures a hard and a soft limit on the maximum number of units assigned to this slice (or any
 	// descendent slices) that may be active at the same time. If the hard limit is reached no further
 	// units associated with the slice may be activated, and their activation will fail with an error. If
@@ -68,7 +64,7 @@ type SliceBlock struct {
 	// hierarchy the limit must provide room for both the payload units (i.e. services, mounts, …) and
 	// structural units (i.e. slice units), if any are defined.
 	//
-	ConcurrencySoftMax int `hcl:"concurrency_soft_max,optional" systemd:"ConcurrencySoftMax"`
+	ConcurrencySoftMax string `hcl:"concurrency_soft_max,optional" systemd:"ConcurrencySoftMax"`
 }
 
 type Slice struct {

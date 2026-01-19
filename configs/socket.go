@@ -1,52 +1,46 @@
+// Generated based on man page systemd.socket of systemd
+
 package configs
 
-// SocketBlock represents the [Socket] section of a systemd unit.
+import (
+	"os"
+)
+
+// SocketBlock is for [Socket] systemd unit block
 //
 // A unit configuration file whose name ends in encodes information about an IPC or network socket or a
-// file system FIFO controlled and supervised by systemd, for socket-based activation.
-//
-// This man page lists the configuration options specific to this unit type. See for the common options
-// of all unit configuration files. The common configuration items are configured in the generic [Unit]
-// and [Install] sections. The socket specific configuration options are configured in the [Socket]
-// section.
-//
-// Additional options are listed in , which define the execution environment the , , and commands are
-// executed in, and in , which define the way the processes are terminated, and in , which configure
-// resource control settings for the processes of the socket.
-//
-// For each socket unit, a matching service unit must exist, describing the service to start on
-// incoming traffic on the socket (see for more information about .service units). The name of the
-// .service unit is by default the same as the name of the .socket unit, but can be altered with the
-// option described below. Depending on the setting of the option described below, this .service unit
-// must either be named like the .socket unit, but with the suffix replaced, unless overridden with ;
-// or it must be a template unit named the same way. Example: a socket file needs a matching service if
-// is set. If is set, a service template must exist from which services are instantiated for each
-// incoming connection.
-//
-// No implicit or dependency from the socket to the service is added. This means that the service may
-// be started without the socket, in which case it must be able to open sockets by itself. To prevent
-// this, an explicit dependency may be added.
-//
-// Socket units may be used to implement on-demand starting of services, as well as parallelized
-// starting of services. See the blog stories linked at the end for an introduction.
-//
-// Note that the daemon software configured for socket activation with socket units needs to be able to
-// accept sockets from systemd, either via systemd's native socket passing interface (see for details
-// about the precise protocol used and the order in which the file descriptors are passed) or via
-// traditional -style socket passing (i.e. sockets passed in via standard input and output, using in
-// the service file).
-//
-// By default, network sockets allocated through units are allocated in the host's network namespace
-// (see ). This does not mean however that the service activated by a configured socket unit has to be
-// part of the host's network namespace as well. It is supported and even good practice to run services
-// in their own network namespace (for example through , see ), receiving only the sockets configured
-// through socket-activation from the host's namespace. In such a set-up communication within the
-// host's network namespace is only permitted through the activation sockets passed in while all
-// sockets allocated from the service code itself will be associated with the service's own namespace,
-// and thus possibly subject to a restrictive configuration.
-//
-// Alternatively, it is possible to run a unit in another network namespace by setting in combination
-// with , see and for details.
+// file system FIFO controlled and supervised by systemd, for socket-based activation. This man page
+// lists the configuration options specific to this unit type. See for the common options of all unit
+// configuration files. The common configuration items are configured in the generic [Unit] and
+// [Install] sections. The socket specific configuration options are configured in the [Socket]
+// section. Additional options are listed in , which define the execution environment the , , and
+// commands are executed in, and in , which define the way the processes are terminated, and in , which
+// configure resource control settings for the processes of the socket. For each socket unit, a
+// matching service unit must exist, describing the service to start on incoming traffic on the socket
+// (see for more information about .service units). The name of the .service unit is by default the
+// same as the name of the .socket unit, but can be altered with the option described below. Depending
+// on the setting of the option described below, this .service unit must either be named like the
+// .socket unit, but with the suffix replaced, unless overridden with ; or it must be a template unit
+// named the same way. Example: a socket file needs a matching service if is set. If is set, a service
+// template must exist from which services are instantiated for each incoming connection. No implicit
+// or dependency from the socket to the service is added. This means that the service may be started
+// without the socket, in which case it must be able to open sockets by itself. To prevent this, an
+// explicit dependency may be added. Socket units may be used to implement on-demand starting of
+// services, as well as parallelized starting of services. See the blog stories linked at the end for
+// an introduction. Note that the daemon software configured for socket activation with socket units
+// needs to be able to accept sockets from systemd, either via systemd's native socket passing
+// interface (see for details about the precise protocol used and the order in which the file
+// descriptors are passed) or via traditional -style socket passing (i.e. sockets passed in via
+// standard input and output, using in the service file). By default, network sockets allocated through
+// units are allocated in the host's network namespace (see ). This does not mean however that the
+// service activated by a configured socket unit has to be part of the host's network namespace as
+// well. It is supported and even good practice to run services in their own network namespace (for
+// example through , see ), receiving only the sockets configured through socket-activation from the
+// host's namespace. In such a set-up communication within the host's network namespace is only
+// permitted through the activation sockets passed in while all sockets allocated from the service code
+// itself will be associated with the service's own namespace, and thus possibly subject to a
+// restrictive configuration. Alternatively, it is possible to run a unit in another network namespace
+// by setting in combination with , see and for details.
 type SocketBlock struct {
 	// Takes a boolean argument. If yes, a service instance is spawned for each incoming connection and
 	// only the connection socket is passed to it. If no, all listening sockets themselves are passed to
@@ -106,7 +100,7 @@ type SocketBlock struct {
 	// details. Defaults to 4294967295. Note that this value is silently capped by the net.core.somaxconn
 	// sysctl, which typically defaults to 4096, so typically the sysctl is the setting that actually
 	// matters.
-	Backlog int `hcl:"backlog,optional" systemd:"Backlog"`
+	Backlog uint64 `hcl:"backlog,optional" systemd:"Backlog"`
 	// Takes one of default, both or ipv6-only. Controls the IPV6_V6ONLY socket option (see <citerefentry
 	// project='die-net'><refentrytitle>ipv6</refentrytitle><manvolnum>7</manvolnum></citerefentry> for
 	// details). If both, IPv6 sockets bound will be accessible via both IPv4 and IPv6. If ipv6-only, they
@@ -160,29 +154,29 @@ type SocketBlock struct {
 	// cannot be activated within the specified time, the socket will be considered failed and get
 	// terminated. Takes a unit-less value in seconds, or a time span value such as "5min 20s". Pass 0 or
 	// infinity to disable the timeout logic (the default).
-	DeferTriggerMaxSec int `hcl:"defer_trigger_max_sec,optional" systemd:"DeferTriggerMaxSec"`
+	DeferTriggerMaxSec string `hcl:"defer_trigger_max_sec,optional" systemd:"DeferTriggerMaxSec"`
 	// If listening on a file system socket or FIFO, the parent directories are automatically created if
 	// needed. This option specifies the file system access mode used when creating these directories.
 	// Takes an access mode in octal notation. Defaults to 0755.
-	DirectoryMode string `hcl:"directory_mode,optional" systemd:"DirectoryMode"`
+	DirectoryMode os.FileMode `unitd:"directory_mode,optional" systemd:"DirectoryMode"`
 	// Takes one or more command lines, which are executed before or after the listening sockets/FIFOs are
 	// created and bound, respectively. The first token of the command line must be an absolute filename,
 	// then followed by arguments for the process. Multiple command lines may be specified following the
 	// same scheme as used for ExecStartPre= of service unit files.
-	ExecStartPost []string `hcl:"exec_start_post,optional" systemd:"ExecStartPost"`
+	ExecStartPost [][]string `hcl:"exec_start_post,optional" systemd:"ExecStartPost"`
 	// Takes one or more command lines, which are executed before or after the listening sockets/FIFOs are
 	// created and bound, respectively. The first token of the command line must be an absolute filename,
 	// then followed by arguments for the process. Multiple command lines may be specified following the
 	// same scheme as used for ExecStartPre= of service unit files.
-	ExecStartPre []string `hcl:"exec_start_pre,optional" systemd:"ExecStartPre"`
+	ExecStartPre [][]string `hcl:"exec_start_pre,optional" systemd:"ExecStartPre"`
 	// Additional commands that are executed before or after the listening sockets/FIFOs are closed and
 	// removed, respectively. Multiple command lines may be specified following the same scheme as used for
 	// ExecStartPre= of service unit files.
-	ExecStopPost []string `hcl:"exec_stop_post,optional" systemd:"ExecStopPost"`
+	ExecStopPost [][]string `hcl:"exec_stop_post,optional" systemd:"ExecStopPost"`
 	// Additional commands that are executed before or after the listening sockets/FIFOs are closed and
 	// removed, respectively. Multiple command lines may be specified following the same scheme as used for
 	// ExecStartPre= of service unit files.
-	ExecStopPre []string `hcl:"exec_stop_pre,optional" systemd:"ExecStopPre"`
+	ExecStopPre [][]string `hcl:"exec_stop_pre,optional" systemd:"ExecStopPre"`
 	// Assigns a name to all file descriptors this socket unit encapsulates. This is useful to help
 	// activated services identify specific file descriptors, if multiple fds are passed. Services may use
 	// the
@@ -191,7 +185,7 @@ type SocketBlock struct {
 	// character, but must exclude control characters and :, and must be at most 255 characters in length.
 	// If this setting is not used, the file descriptor name defaults to the name of the socket unit
 	// (including its .socket suffix) when Accept=no, connection otherwise.
-	FileDescriptorName []string `hcl:"file_descriptor_name,optional" systemd:"FileDescriptorName"`
+	FileDescriptorName string `hcl:"file_descriptor_name,optional" systemd:"FileDescriptorName"`
 	// Takes a boolean argument. May only be used when Accept=no. If yes, the socket's buffers are cleared
 	// after the triggered service exited. This causes any pending data to be flushed and any pending
 	// incoming connections to be rejected. If no, the socket's buffers will not be cleared, permitting the
@@ -209,7 +203,7 @@ type SocketBlock struct {
 	// project='die-net'><refentrytitle>ip</refentrytitle><manvolnum>7</manvolnum></citerefentry> for
 	// details.). Either a numeric string or one of low-delay, throughput, reliability or low-cost may be
 	// specified.
-	Iptos int `hcl:"iptos,optional" systemd:"IPTOS"`
+	Iptos string `hcl:"iptos,optional" systemd:"IPTOS"`
 	// Takes an integer argument controlling the IPv4 Time-To-Live/IPv6 Hop-Count field for packets
 	// generated from this socket. This sets the IP_TTL/IPV6_UNICAST_HOPS socket options (see <citerefentry
 	// project='die-net'><refentrytitle>ip</refentrytitle><manvolnum>7</manvolnum></citerefentry> and
@@ -237,7 +231,7 @@ type SocketBlock struct {
 	// project='man-pages'><refentrytitle>socket</refentrytitle><manvolnum>7</manvolnum></citerefentry> and
 	// the <ulink url="http://www.tldp.org/HOWTO/html_single/TCP-Keepalive-HOWTO/">TCP Keepalive
 	// HOWTO</ulink> for details.) Default value is 9.
-	KeepAliveProbes int `hcl:"keep_alive_probes,optional" systemd:"KeepAliveProbes"`
+	KeepAliveProbes uint64 `hcl:"keep_alive_probes,optional" systemd:"KeepAliveProbes"`
 	// Takes time (in seconds) as argument. The connection needs to remain idle before TCP starts sending
 	// keepalive probes. This controls the TCP_KEEPIDLE socket option (see <citerefentry
 	// project='man-pages'><refentrytitle>socket</refentrytitle><manvolnum>7</manvolnum></citerefentry> and
@@ -291,23 +285,23 @@ type SocketBlock struct {
 	// configured on is up and running, and even regardless of whether it will be up and running at any
 	// point. To deal with this, it is recommended to set the FreeBind= option described below.
 	//
-	ListenDatagram string `hcl:"listen_datagram,optional" systemd:"ListenDatagram"`
+	ListenDatagram []string `hcl:"listen_datagram,optional" systemd:"ListenDatagram"`
 	// Specifies a file system FIFO (see <citerefentry
 	// project='man-pages'><refentrytitle>fifo</refentrytitle><manvolnum>7</manvolnum></citerefentry> for
 	// details) to listen on. This expects an absolute file system path as argument. Behavior otherwise is
 	// very similar to the ListenDatagram= directive above.
-	ListenFIFO string `hcl:"listen_fifo,optional" systemd:"ListenFIFO"`
+	ListenFIFO []string `hcl:"listen_fifo,optional" systemd:"ListenFIFO"`
 	// Specifies a POSIX message queue name to listen on (see <citerefentry
 	// project='man-pages'><refentrytitle>mq_overview</refentrytitle><manvolnum>7</manvolnum></citerefentry>
 	// for details). This expects a valid message queue name (i.e. beginning with /). Behavior otherwise is
 	// very similar to the ListenFIFO= directive above. On Linux message queue descriptors are actually
 	// file descriptors and can be inherited between processes.
-	ListenMessageQueue string `hcl:"listen_message_queue,optional" systemd:"ListenMessageQueue"`
+	ListenMessageQueue []string `hcl:"listen_message_queue,optional" systemd:"ListenMessageQueue"`
 	// Specifies a Netlink family to create a socket for to listen on. This expects a short string
 	// referring to the AF_NETLINK family name (such as audit or kobject-uevent) as argument, optionally
 	// suffixed by a whitespace followed by a multicast group integer. Behavior otherwise is very similar
 	// to the ListenDatagram= directive above.
-	ListenNetlink string `hcl:"listen_netlink,optional" systemd:"ListenNetlink"`
+	ListenNetlink []string `hcl:"listen_netlink,optional" systemd:"ListenNetlink"`
 	// Specifies an address to listen on for a stream (SOCK_STREAM), datagram (SOCK_DGRAM), or sequential
 	// packet (SOCK_SEQPACKET) socket, respectively. The address can be written in various formats:
 	//
@@ -355,11 +349,11 @@ type SocketBlock struct {
 	// configured on is up and running, and even regardless of whether it will be up and running at any
 	// point. To deal with this, it is recommended to set the FreeBind= option described below.
 	//
-	ListenSequentialPacket string `hcl:"listen_sequential_packet,optional" systemd:"ListenSequentialPacket"`
+	ListenSequentialPacket []string `hcl:"listen_sequential_packet,optional" systemd:"ListenSequentialPacket"`
 	// Specifies a special file in the file system to listen on. This expects an absolute file system path
 	// as argument. Behavior otherwise is very similar to the ListenFIFO= directive above. Use this to open
 	// character device nodes as well as special files in /proc/ and /sys/.
-	ListenSpecial string `hcl:"listen_special,optional" systemd:"ListenSpecial"`
+	ListenSpecial []string `hcl:"listen_special,optional" systemd:"ListenSpecial"`
 	// Specifies an address to listen on for a stream (SOCK_STREAM), datagram (SOCK_DGRAM), or sequential
 	// packet (SOCK_SEQPACKET) socket, respectively. The address can be written in various formats:
 	//
@@ -407,14 +401,14 @@ type SocketBlock struct {
 	// configured on is up and running, and even regardless of whether it will be up and running at any
 	// point. To deal with this, it is recommended to set the FreeBind= option described below.
 	//
-	ListenStream string `hcl:"listen_stream,optional" systemd:"ListenStream"`
+	ListenStream []string `hcl:"listen_stream,optional" systemd:"ListenStream"`
 	// Specifies a <ulink url="https://docs.kernel.org/usb/functionfs.html">USB FunctionFS</ulink>
 	// endpoints location to listen on, for implementation of USB gadget functions. This expects an
 	// absolute file system path of a FunctionFS mount point as the argument. Behavior otherwise is very
 	// similar to the ListenFIFO= directive above. Use this to open the FunctionFS endpoint ep0. When using
 	// this option, the activated service has to have the USBFunctionDescriptors= and USBFunctionStrings=
 	// options set.
-	ListenUSBFunction string `hcl:"listen_usb_function,optional" systemd:"ListenUSBFunction"`
+	ListenUSBFunction []string `hcl:"listen_usb_function,optional" systemd:"ListenUSBFunction"`
 	// Takes an integer value. Controls the firewall mark of packets generated by this socket. This can be
 	// used in the firewall logic to filter packets from this socket. This sets the SO_MARK socket option.
 	// See <citerefentry
@@ -425,23 +419,23 @@ type SocketBlock struct {
 	// set. If more concurrent connections are coming in, they will be refused until at least one existing
 	// connection is terminated. This setting has no effect on sockets configured with Accept=no or
 	// datagram sockets. Defaults to 64.
-	MaxConnections int `hcl:"max_connections,optional" systemd:"MaxConnections"`
+	MaxConnections uint64 `hcl:"max_connections,optional" systemd:"MaxConnections"`
 	// The maximum number of connections for a service per source IP address (in case of IPv4/IPv6), per
 	// source CID (in case of AF_VSOCK), or source UID (in case of AF_UNIX). This is very similar to the
 	// MaxConnections= directive above. Defaults to 0, i.e. disabled.
-	MaxConnectionsPerSource int `hcl:"max_connections_per_source,optional" systemd:"MaxConnectionsPerSource"`
+	MaxConnectionsPerSource uint64 `hcl:"max_connections_per_source,optional" systemd:"MaxConnectionsPerSource"`
 	// These two settings take integer values and control the mq_maxmsg field or the mq_msgsize field,
 	// respectively, when creating the message queue. Note that either none or both of these variables need
 	// to be set. See <citerefentry
 	// project='die-net'><refentrytitle>mq_setattr</refentrytitle><manvolnum>3</manvolnum></citerefentry>
 	// for details.
-	MessageQueueMaxMessages int `hcl:"message_queue_max_messages,optional" systemd:"MessageQueueMaxMessages"`
+	MessageQueueMaxMessages int64 `hcl:"message_queue_max_messages,optional" systemd:"MessageQueueMaxMessages"`
 	// These two settings take integer values and control the mq_maxmsg field or the mq_msgsize field,
 	// respectively, when creating the message queue. Note that either none or both of these variables need
 	// to be set. See <citerefentry
 	// project='die-net'><refentrytitle>mq_setattr</refentrytitle><manvolnum>3</manvolnum></citerefentry>
 	// for details.
-	MessageQueueMessageSize int `hcl:"message_queue_message_size,optional" systemd:"MessageQueueMessageSize"`
+	MessageQueueMessageSize int64 `hcl:"message_queue_message_size,optional" systemd:"MessageQueueMessageSize"`
 	// Takes a boolean argument. TCP Nagle's algorithm works by combining a number of small outgoing
 	// messages, and sending them all at once. This controls the TCP_NODELAY socket option (see
 	// <citerefentry
@@ -471,7 +465,7 @@ type SocketBlock struct {
 	// Takes a size in bytes. Controls the pipe buffer size of FIFOs configured in this socket unit. See
 	// <citerefentry><refentrytitle>fcntl</refentrytitle><manvolnum>2</manvolnum></citerefentry> for
 	// details. The usual suffixes K, M, G are supported and are understood to the base of 1024.
-	PipeSize int `hcl:"pipe_size,optional" systemd:"PipeSize"`
+	PipeSize int64 `hcl:"pipe_size,optional" systemd:"PipeSize"`
 	// Configures a limit on how often polling events on the file descriptors backing this socket unit will
 	// be considered. This pair of settings is similar to TriggerLimitIntervalSec=/TriggerLimitBurst= but
 	// instead of putting a (fatal) limit on the activation frequency puts a (transient) limit on the
@@ -492,7 +486,7 @@ type SocketBlock struct {
 	// polling limit should typically ensure the trigger limit is never hit, unless one of them is
 	// reconfigured or disabled.
 	//
-	PollLimitBurst int `hcl:"poll_limit_burst,optional" systemd:"PollLimitBurst"`
+	PollLimitBurst uint64 `hcl:"poll_limit_burst,optional" systemd:"PollLimitBurst"`
 	// Configures a limit on how often polling events on the file descriptors backing this socket unit will
 	// be considered. This pair of settings is similar to TriggerLimitIntervalSec=/TriggerLimitBurst= but
 	// instead of putting a (fatal) limit on the activation frequency puts a (transient) limit on the
@@ -523,7 +517,7 @@ type SocketBlock struct {
 	// This controls the SO_RCVBUF and SO_SNDBUF socket options (see <citerefentry
 	// project='man-pages'><refentrytitle>socket</refentrytitle><manvolnum>7</manvolnum></citerefentry> for
 	// details.). The usual suffixes K, M, G are supported and are understood to the base of 1024.
-	ReceiveBuffer int `hcl:"receive_buffer,optional" systemd:"ReceiveBuffer"`
+	ReceiveBuffer int64 `hcl:"receive_buffer,optional" systemd:"ReceiveBuffer"`
 	// Takes a boolean argument. If enabled, any file nodes created by this socket unit are removed when it
 	// is stopped. This applies to AF_UNIX sockets in the file system, POSIX message queues, FIFOs, as well
 	// as any symlinks to them configured with Symlinks=. Normally, it should not be necessary to use this
@@ -545,17 +539,17 @@ type SocketBlock struct {
 	// activated service is passed in single socket file descriptor, i.e. service instances that have
 	// standard input connected to a socket or services triggered by exactly one socket unit. Also note
 	// that this option is useful only when MLS/MCS SELinux policy is deployed. Defaults to false.
-	SELinuxContextFromNet string `hcl:"se_linux_context_from_net,optional" systemd:"SELinuxContextFromNet"`
+	SELinuxContextFromNet bool `hcl:"se_linux_context_from_net,optional" systemd:"SELinuxContextFromNet"`
 	// Takes an integer argument controlling the receive or send buffer sizes of this socket, respectively.
 	// This controls the SO_RCVBUF and SO_SNDBUF socket options (see <citerefentry
 	// project='man-pages'><refentrytitle>socket</refentrytitle><manvolnum>7</manvolnum></citerefentry> for
 	// details.). The usual suffixes K, M, G are supported and are understood to the base of 1024.
-	SendBuffer int `hcl:"send_buffer,optional" systemd:"SendBuffer"`
+	SendBuffer int64 `hcl:"send_buffer,optional" systemd:"SendBuffer"`
 	// Specifies the service unit name to activate on incoming traffic. This setting is only allowed for
 	// sockets with Accept=no. It defaults to the service that bears the same name as the socket (with the
 	// suffix replaced). In most cases, it should not be necessary to use this option. Note that setting
 	// this parameter might result in additional dependencies to be added to the unit (see above).
-	Service []string `hcl:"service,optional" systemd:"Service"`
+	Service string `hcl:"service,optional" systemd:"Service"`
 	// Takes a string value. Controls the extended attributes security.SMACK64, security.SMACK64IPIN and
 	// security.SMACK64IPOUT, respectively, i.e. the security label of the FIFO, or the security label for
 	// the incoming or outgoing connections of the socket, respectively. See <ulink
@@ -579,7 +573,7 @@ type SocketBlock struct {
 	// If listening on a file system socket, FIFO, or message queue, this option specifies the file system
 	// access mode used when creating the file node. Takes an access mode in octal notation. Defaults to
 	// 0666.
-	SocketMode string `hcl:"socket_mode,optional" systemd:"SocketMode"`
+	SocketMode os.FileMode `unitd:"socket_mode,optional" systemd:"SocketMode"`
 	// Takes one of udplite, sctp or mptcp. The socket will use the UDP-Lite (IPPROTO_UDPLITE), SCTP
 	// (IPPROTO_SCTP) or MPTCP (IPPROTO_MPTCP) protocol, respectively.
 	SocketProtocol string `hcl:"socket_protocol,optional" systemd:"SocketProtocol"`
@@ -608,7 +602,7 @@ type SocketBlock struct {
 	// Takes a unit-less value in seconds, or a time span value such as "5min 20s". Pass 0 to disable the
 	// timeout logic. Defaults to DefaultTimeoutStartSec= from the manager configuration file (see
 	// <citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>).
-	TimeoutSec int `hcl:"timeout_sec,optional" systemd:"TimeoutSec"`
+	TimeoutSec string `hcl:"timeout_sec,optional" systemd:"TimeoutSec"`
 	// Takes one of off, us (alias: usec, μs) or ns (alias: nsec). This controls the SO_TIMESTAMP or
 	// SO_TIMESTAMPNS socket options, and enables whether ingress network traffic shall carry timestamping
 	// metadata. Defaults to off.
@@ -632,7 +626,7 @@ type SocketBlock struct {
 	// slowdown if a socket unit is flooded with incoming traffic, as opposed to the permanent failure
 	// state TriggerLimitIntervalSec=/TriggerLimitBurst= results in.
 	//
-	TriggerLimitBurst int `hcl:"trigger_limit_burst,optional" systemd:"TriggerLimitBurst"`
+	TriggerLimitBurst uint64 `hcl:"trigger_limit_burst,optional" systemd:"TriggerLimitBurst"`
 	// Configures a limit on how often this socket unit may be activated within a specific time interval.
 	// The TriggerLimitIntervalSec= setting may be used to configure the length of the time interval in the
 	// usual time units us, ms, s, min, h, … and defaults to 2s (See
