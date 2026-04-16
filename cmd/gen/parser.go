@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"regexp"
 	"strings"
 )
 
@@ -127,14 +128,7 @@ func parsePurpose(refEntry RefEntry) string {
 func parseDescription(refEntry RefEntry) string {
 	for _, section := range refEntry.Sections {
 		if section.Title == "Description" {
-			var parts []string
-			for _, para := range section.Para {
-				cleaned := cleanText(para)
-				if cleaned != "" {
-					parts = append(parts, cleaned)
-				}
-			}
-			return strings.Join(parts, "\n\n")
+			return joinCleanedTexts(section.Para)
 		}
 	}
 	return ""
@@ -194,9 +188,18 @@ func extractTableDescription(entry *VarListEntry, term string) string {
 }
 
 func extractFullDescription(entry *VarListEntry) string {
+	texts := make([]string, len(entry.ListItem.Para))
+	for i, p := range entry.ListItem.Para {
+		texts[i] = p.Content
+	}
+	return joinCleanedTexts(texts)
+}
+
+// joinCleanedTexts cleans each text and joins non-empty results with double newlines.
+func joinCleanedTexts(texts []string) string {
 	var parts []string
-	for _, para := range entry.ListItem.Para {
-		cleaned := cleanText(para.Content)
+	for _, t := range texts {
+		cleaned := cleanText(t)
 		if cleaned != "" {
 			parts = append(parts, cleaned)
 		}
@@ -204,31 +207,11 @@ func extractFullDescription(entry *VarListEntry) string {
 	return strings.Join(parts, "\n\n")
 }
 
+var xmlTagRe = regexp.MustCompile(`</?(?:literal|filename|varname|replaceable|option|constant|command|emphasis)>`)
+
 func cleanText(text string) string {
 	text = strings.TrimSpace(text)
-
-	replacements := []struct{ old, new string }{
-		{"<literal>", ""},
-		{"</literal>", ""},
-		{"<filename>", ""},
-		{"</filename>", ""},
-		{"<varname>", ""},
-		{"</varname>", ""},
-		{"<replaceable>", ""},
-		{"</replaceable>", ""},
-		{"<option>", ""},
-		{"</option>", ""},
-		{"<constant>", ""},
-		{"</constant>", ""},
-		{"<command>", ""},
-		{"</command>", ""},
-		{"<emphasis>", ""},
-		{"</emphasis>", ""},
-	}
-
-	for _, r := range replacements {
-		text = strings.ReplaceAll(text, r.old, r.new)
-	}
+	text = xmlTagRe.ReplaceAllString(text, "")
 
 	// Normalize whitespace: convert all whitespace sequences to single spaces
 	text = strings.Join(strings.Fields(text), " ")

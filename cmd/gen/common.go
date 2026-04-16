@@ -1,10 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 )
 
-func genCommon(directives []Directive) string {
+func genCommon(pkg string, directives []Directive) string {
 	var out strings.Builder
 
 	installCode, installDeps := generateBlockStruct(directives, "Install", "core")
@@ -14,7 +15,7 @@ func genCommon(directives []Directive) string {
 	imports.Merge(installDeps)
 	imports.Merge(unitDeps)
 
-	out.WriteString("package configs\n\n")
+	fmt.Fprintf(&out, "package %s\n\n", pkg)
 	out.WriteString("\n")
 	writeImports(&out, imports.Sorted())
 	out.WriteString("\n")
