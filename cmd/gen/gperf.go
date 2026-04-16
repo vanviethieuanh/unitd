@@ -72,24 +72,13 @@ func loadGperfDirectives(dir string, parserMap map[string]string) []Directive {
 				continue
 			}
 
-			parsedType, err := ParseTypeExpr(typeStr)
+			d, err := NewDirective(gr.Section, gr.Property, gr.System, typeStr)
 			if err != nil {
 				log.Warnf("parse type %q (parser %s): %v — skipping", typeStr, gr.Parser, err)
 				continue
 			}
 
-			goType, deps := parsedType.toGoType()
-
-			result = append(result, Directive{
-				Identifier: DirectiveIdentifier{
-					Section: gr.Section,
-					Key:     gr.Property,
-				},
-				Type:       goType,
-				System:     gr.System,
-				Deps:       deps,
-				NativeType: len(deps) == 0,
-			})
+			result = append(result, d)
 		}
 
 		f.Close()

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -32,36 +31,26 @@ type Directive struct {
 	NativeType bool
 }
 
-func (d *Directive) UnmarshalJSON(b []byte) error {
-	type alias struct {
-		System   string `json:"system"`
-		Section  string `json:"section"`
-		Property string `json:"property"`
-		Type     string `json:"type"`
-	}
-
-	var tmp alias
-	if err := json.Unmarshal(b, &tmp); err != nil {
-		return err
-	}
-
-	parsedType, err := ParseTypeExpr(tmp.Type)
+// NewDirective creates a Directive by parsing a type expression string
+// (e.g. "STRING", "UNIT [...]") into the corresponding Go type and imports.
+func NewDirective(section, key, system, typeStr string) (Directive, error) {
+	parsedType, err := ParseTypeExpr(typeStr)
 	if err != nil {
-		return fmt.Errorf("failed to parse type expression %q: %w", tmp.Type, err)
+		return Directive{}, fmt.Errorf("failed to parse type expression %q: %w", typeStr, err)
 	}
 
 	goType, deps := parsedType.toGoType()
 
-	d.System = tmp.System
-	d.Type = goType
-	d.Deps = deps
-	d.NativeType = len(deps) == 0
-	d.Identifier = DirectiveIdentifier{
-		Section: tmp.Section,
-		Key:     tmp.Property,
-	}
-
-	return nil
+	return Directive{
+		Identifier: DirectiveIdentifier{
+			Section: section,
+			Key:     key,
+		},
+		Type:       goType,
+		System:     system,
+		Deps:       deps,
+		NativeType: len(deps) == 0,
+	}, nil
 }
 
 func WriteDirective(builder *strings.Builder, d *Directive) {
