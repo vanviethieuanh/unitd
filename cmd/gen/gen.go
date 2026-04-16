@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -37,11 +38,18 @@ func generateBlockStruct(
 	typeName := toPascalCase(section) + "Block"
 	fmt.Fprintf(&out, "type %s struct {\n", typeName)
 
+	var filtered []Directive
 	for _, d := range directives {
 		if !strings.EqualFold(d.Identifier.Section, section) || !strings.EqualFold(d.System, system) {
 			continue
 		}
+		filtered = append(filtered, d)
+	}
+	sort.Slice(filtered, func(i, j int) bool {
+		return toPascalCase(filtered[i].Identifier.Key) < toPascalCase(filtered[j].Identifier.Key)
+	})
 
+	for _, d := range filtered {
 		WriteDirective(&out, &d)
 		imports.AddAll(d.Deps)
 	}

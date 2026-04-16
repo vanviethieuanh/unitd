@@ -96,7 +96,6 @@ func WriteDirective(builder *strings.Builder, d *Directive) {
 }
 
 func getDirectives(f io.Reader) []Directive {
-
 	scanner := bufio.NewScanner(f)
 
 	var result []Directive

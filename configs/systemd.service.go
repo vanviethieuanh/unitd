@@ -18,12 +18,6 @@ import (
 // the service. The command allows creating and units dynamically and transiently from the command
 // line.
 type ServiceBlock struct {
-	// Takes a D-Bus destination name that this service shall use. This option is mandatory for services
-	// where Type= is set to dbus. It is recommended to always set this property if known to make it easy
-	// to map the service name to the D-Bus destination. In particular, systemctl
-	// service-log-level/service-log-target verbs make use of this.
-	BusName   string `hcl:"bus_name,optional" systemd:"BusName"`
-	BusPolicy string `hcl:"bus_policy,optional" systemd:"BusPolicy"`
 	// Optional commands that are executed before the commands in ExecStartPre=. Syntax is the same as for
 	// ExecStart=. Multiple command lines are allowed, regardless of the service type (i.e. Type=), and the
 	// commands are executed one after the other, serially.
@@ -240,17 +234,6 @@ type ServiceBlock struct {
 	// url="https://systemd.io/FILE_DESCRIPTOR_STORE">File Descriptor Store</ulink> overview.
 	//
 	FileDescriptorStoreMax uint64 `hcl:"file_descriptor_store_max,optional" systemd:"FileDescriptorStoreMax"`
-	// Takes one of no, yes, restart and controls when to release the service's file descriptor store (i.e.
-	// when to close the contained file descriptors, if any). If set to no the file descriptor store is
-	// automatically released when the service is stopped; if restart (the default) it is kept around as
-	// long as the unit is neither inactive nor failed, or a job is queued for the service, or the service
-	// is expected to be restarted. If yes the file descriptor store is kept around until the unit is
-	// removed from memory (i.e. is not referenced anymore and inactive). The latter is useful to keep
-	// entries in the file descriptor store pinned until the service manager exits.
-	//
-	// Use systemctl clean --what=fdstore … to release the file descriptor store explicitly.
-	//
-	FileDescriptorStorePreserve string `hcl:"file_descriptor_store_preserve,optional" systemd:"FileDescriptorStorePreserve"`
 	// Takes a boolean value that specifies whether systemd should try to guess the main PID of a service
 	// if it cannot be determined reliably. This option is ignored unless Type=forking is set and PIDFile=
 	// is unset because for the other types or with an explicitly configured PID file, the main PID is
@@ -303,77 +286,7 @@ type ServiceBlock struct {
 	// manager, otherwise this synchronization mechanism is unnecessary for attribution of notifications to
 	// the unit.
 	//
-	NotifyAccess string `hcl:"notify_access,optional" systemd:"NotifyAccess"`
-	// Configure the out-of-memory (OOM) killing policy for the kernel and the userspace OOM killer
-	// <citerefentry><refentrytitle>systemd-oomd.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>.
-	// On Linux, when memory becomes scarce to the point that the kernel has trouble allocating memory for
-	// itself, it might decide to kill a running process in order to free up memory and reduce memory
-	// pressure. Note that systemd-oomd.service is a more flexible solution that aims to prevent
-	// out-of-memory situations for the userspace too, not just the kernel, by attempting to terminate
-	// services earlier, before the kernel would have to act.
-	//
-	// This setting takes one of continue, stop or kill. If set to continue and a process in the unit is
-	// killed by the OOM killer, this is logged but the unit continues running. If set to stop the event is
-	// logged and the unit's processes are terminated cleanly by the service manager. If set to kill and
-	// one of the unit's processes is killed by the OOM killer the kernel is instructed to kill all
-	// remaining processes of the unit too, by setting the memory.oom.group attribute to 1; also see kernel
-	// page <ulink url="https://docs.kernel.org/admin-guide/cgroup-v2.html">Control Group v2</ulink>. In
-	// case of both stop and kill, the service ultimately ends up in the oom-kill failed state after which
-	// Restart= may apply.
-	//
-	// Defaults to the setting DefaultOOMPolicy= in
-	// <citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>
-	// is set to, except for units where Delegate= is turned on, where it defaults to continue.
-	//
-	// Use the OOMScoreAdjust= setting to configure whether processes of the unit shall be considered
-	// preferred or less preferred candidates for process termination by the Linux OOM killer logic. See
-	// <citerefentry><refentrytitle>systemd.exec</refentrytitle><manvolnum>5</manvolnum></citerefentry> for
-	// details.
-	//
-	// This setting also applies to
-	// <citerefentry><refentrytitle>systemd-oomd.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>.
-	// Similarly to the kernel OOM kills performed by the kernel, this setting determines the state of the
-	// unit after systemd-oomd kills a cgroup associated with it.
-	//
-	OOMPolicy string `hcl:"oom_policy,optional" systemd:"OOMPolicy"`
-	// Takes an argument of the form path<optional>:fd-name:options</optional>, where: <itemizedlist>
-	// <listitem><simpara>path is a path to a file or an AF_UNIX socket in the file
-	// system;</simpara></listitem> <listitem><simpara>fd-name is a name that will be associated with the
-	// file descriptor; the name may contain any ASCII character, but must exclude control characters and
-	// ":", and must be at most 255 characters in length; it is optional and, if not provided, defaults to
-	// the file name;</simpara></listitem> <listitem><simpara>options is a comma-separated list of access
-	// options; possible values are read-only, append, truncate, graceful; if not specified, files will be
-	// opened in rw mode; if graceful is specified, errors during file/socket opening are ignored.
-	// Specifying the same option several times is treated as an error.</simpara></listitem>
-	// </itemizedlist> The file or socket is opened by the service manager and the file descriptor is
-	// passed to the service. If the path is a socket, we call <function>connect()</function> on it. See
-	// <citerefentry><refentrytitle>sd_listen_fds</refentrytitle><manvolnum>3</manvolnum></citerefentry>
-	// for more details on how to retrieve these file descriptors.
-	//
-	// This setting is useful to allow services to access files/sockets that they cannot access themselves
-	// (due to running in a separate mount namespace, not having privileges, ...).
-	//
-	// This setting can be specified multiple times, in which case all the specified paths are opened and
-	// the file descriptors passed to the service. If the empty string is assigned, the entire list of open
-	// files defined prior to this is reset.
-	//
-	OpenFile string `hcl:"open_file,optional" systemd:"OpenFile"`
-	// Takes a path referring to the PID file of the service. Usage of this option is recommended for
-	// services where Type= is set to forking. The path specified typically points to a file below /run/.
-	// If a relative path is specified for system service, then it is hence prefixed with /run/, and
-	// prefixed with $XDG_RUNTIME_DIR if specified in a user service. The service manager will read the PID
-	// of the main process of the service from this file after start-up of the service. The service manager
-	// will not write to the file configured here, although it will remove the file after the service has
-	// shut down if it still exists. The PID file does not need to be owned by a privileged user, but if it
-	// is owned by an unprivileged user additional safety restrictions are enforced: the file may not be a
-	// symlink to a file owned by a different user (neither directly nor indirectly), and the PID file must
-	// refer to a process already belonging to the service.
-	//
-	// Note that PID files should be avoided in modern projects. Use Type=notify, Type=notify-reload or
-	// Type=simple where possible, which does not require use of PID files to determine the main process of
-	// a service and avoids needless forking.
-	//
-	PIDFile              string `hcl:"pid_file,optional" systemd:"PIDFile"`
+	NotifyAccess         string `hcl:"notify_access,optional" systemd:"NotifyAccess"`
 	PermissionsStartOnly bool   `hcl:"permissions_start_only,optional" systemd:"PermissionsStartOnly"`
 	RebootArgument       string `hcl:"reboot_argument,optional" systemd:"RebootArgument"`
 	// Configures the UNIX process signal to send to the service's main process when asked to reload the
@@ -437,6 +350,16 @@ type ServiceBlock struct {
 	RestartSec int `hcl:"restart_sec,optional" systemd:"RestartSec"`
 	// Configures the number of exponential steps to take to increase the interval of auto-restarts from
 	// RestartSec= to RestartMaxDelaySec=. Takes a positive integer or 0 to disable it. Defaults to 0.
+	// Hint: values between 3 and 5 are good choices when exponential backoff is desired.
+	//
+	// Example:
+	//
+	// This will produce the following restart intervals: 10s, 20s, 40s, 80s, 160s, 160s, 160s, etc. Notice
+	// the geometric interpolation and the resulting constant ratio between intervals; here it is 2. The
+	// formula for the ratio is <inlineequation> <mathphrase> (RestartMaxDelaySec / RestartSec)^(1 /
+	// RestartSteps) </mathphrase> </inlineequation>. A (repeating) delay equal to RestartMaxDelaySec= is
+	// always reached after <inlineequation> <mathphrase> RestartSteps + 1 </mathphrase> </inlineequation>
+	// steps.
 	//
 	// This setting is effective only if RestartMaxDelaySec= is also set and RestartSec= is not zero.
 	//
@@ -512,31 +435,6 @@ type ServiceBlock struct {
 	// status values and names.
 	//
 	SuccessExitStatus string `hcl:"success_exit_status,optional" systemd:"SuccessExitStatus"`
-	SysVStartPriority string `hcl:"sys_v_start_priority,optional" systemd:"SysVStartPriority"`
-	// This option configures the time to wait for the service to terminate when it was aborted due to a
-	// watchdog timeout (see WatchdogSec=). If the service has a short TimeoutStopSec= this option can be
-	// used to give the system more time to write a core dump of the service. Upon expiration the service
-	// will be forcibly terminated by SIGKILL (see KillMode= in
-	// <citerefentry><refentrytitle>systemd.kill</refentrytitle><manvolnum>5</manvolnum></citerefentry>).
-	// The core file will be truncated in this case. Use TimeoutAbortSec= to set a sensible timeout for the
-	// core dumping per service that is large enough to write all expected data while also being short
-	// enough to handle the service failure in due time.
-	//
-	// Takes a unit-less value in seconds, or a time span value such as "5min 20s". Pass an empty value to
-	// skip the dedicated watchdog abort timeout handling and fall back TimeoutStopSec=. Pass infinity to
-	// disable the timeout logic. Defaults to DefaultTimeoutAbortSec= from the manager configuration file
-	// (see
-	// <citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>).
-	//
-	// If a service of Type=notify/Type=notify-reload handles SIGABRT itself (instead of relying on the
-	// kernel to write a core dump) it can send EXTEND_TIMEOUT_USEC=… to extended the abort time beyond
-	// TimeoutAbortSec=. The first receipt of this message must occur before TimeoutAbortSec= is exceeded,
-	// and once the abort time has extended beyond TimeoutAbortSec=, the service manager will allow the
-	// service to continue to abort, provided the service repeats EXTEND_TIMEOUT_USEC=… within the
-	// interval specified, or terminates itself (see
-	// <citerefentry><refentrytitle>sd_notify</refentrytitle><manvolnum>3</manvolnum></citerefentry>).
-	//
-	TimeoutAbortSec string `hcl:"timeout_abort_sec,optional" systemd:"TimeoutAbortSec"`
 	// A shorthand for configuring both TimeoutStartSec= and TimeoutStopSec= to the specified value.
 	TimeoutSec int `hcl:"timeout_sec,optional" systemd:"TimeoutSec"`
 	// These options configure the action that is taken in case a daemon service does not signal start-up
@@ -590,26 +488,6 @@ type ServiceBlock struct {
 	// timeout. This setting can be used to expedite the shutdown of failing services.
 	//
 	TimeoutStopFailureMode string `hcl:"timeout_stop_failure_mode,optional" systemd:"TimeoutStopFailureMode"`
-	// This option serves two purposes. First, it configures the time to wait for each ExecStop= command.
-	// If any of them times out, subsequent ExecStop= commands are skipped and the service will be
-	// terminated by SIGTERM. If no ExecStop= commands are specified, the service gets the SIGTERM
-	// immediately. This default behavior can be changed by the TimeoutStopFailureMode= option. Second, it
-	// configures the time to wait for the service itself to stop. If it does not terminate in the
-	// specified time, it will be forcibly terminated by SIGKILL (see KillMode= in
-	// <citerefentry><refentrytitle>systemd.kill</refentrytitle><manvolnum>5</manvolnum></citerefentry>).
-	// Takes a unit-less value in seconds, or a time span value such as "5min 20s". Pass infinity to
-	// disable the timeout logic. Defaults to DefaultTimeoutStopSec= from the manager configuration file
-	// (see
-	// <citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>).
-	//
-	// If a service of Type=notify/Type=notify-reload sends EXTEND_TIMEOUT_USEC=…, this may cause the
-	// stop time to be extended beyond TimeoutStopSec=. The first receipt of this message must occur before
-	// TimeoutStopSec= is exceeded, and once the stop time has extended beyond TimeoutStopSec=, the service
-	// manager will allow the service to continue to stop, provided the service repeats
-	// EXTEND_TIMEOUT_USEC=… within the interval specified, or terminates itself (see
-	// <citerefentry><refentrytitle>sd_notify</refentrytitle><manvolnum>3</manvolnum></citerefentry>).
-	//
-	TimeoutStopSec string `hcl:"timeout_stop_sec,optional" systemd:"TimeoutStopSec"`
 	// Configures the mechanism via which the service notifies the manager that the service start-up has
 	// finished. One of simple, exec, forking, oneshot, dbus, notify, notify-reload, or idle:
 	//

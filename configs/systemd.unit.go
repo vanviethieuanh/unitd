@@ -6,12 +6,12 @@ import (
 )
 
 type InstallBlock struct {
-	Alias           string `hcl:"alias,optional" systemd:"Alias"`
-	Also            string `hcl:"also,optional" systemd:"Also"`
-	DefaultInstance string `hcl:"default_instance,optional" systemd:"DefaultInstance"`
-	RequiredBy      string `hcl:"required_by,optional" systemd:"RequiredBy"`
-	UpheldBy        string `hcl:"upheld_by,optional" systemd:"UpheldBy"`
-	WantedBy        string `hcl:"wanted_by,optional" systemd:"WantedBy"`
+	Alias           string          `hcl:"alias,optional" systemd:"Alias"`
+	Also            []hcl.Traversal `unitd:"also,optional" systemd:"Also"`
+	DefaultInstance string          `hcl:"default_instance,optional" systemd:"DefaultInstance"`
+	RequiredBy      []hcl.Traversal `unitd:"required_by,optional" systemd:"RequiredBy"`
+	UpheldBy        []hcl.Traversal `unitd:"upheld_by,optional" systemd:"UpheldBy"`
+	WantedBy        []hcl.Traversal `unitd:"wanted_by,optional" systemd:"WantedBy"`
 }
 
 type UnitBlock struct {
@@ -46,6 +46,7 @@ type UnitBlock struct {
 	AssertPathIsEncrypted           string          `hcl:"assert_path_is_encrypted,optional" systemd:"AssertPathIsEncrypted"`
 	AssertPathIsMountPoint          string          `hcl:"assert_path_is_mount_point,optional" systemd:"AssertPathIsMountPoint"`
 	AssertPathIsReadWrite           string          `hcl:"assert_path_is_read_write,optional" systemd:"AssertPathIsReadWrite"`
+	AssertPathIsSocket              string          `hcl:"assert_path_is_socket,optional" systemd:"AssertPathIsSocket"`
 	AssertPathIsSymbolicLink        string          `hcl:"assert_path_is_symbolic_link,optional" systemd:"AssertPathIsSymbolicLink"`
 	AssertSecurity                  string          `hcl:"assert_security,optional" systemd:"AssertSecurity"`
 	AssertUser                      string          `hcl:"assert_user,optional" systemd:"AssertUser"`
@@ -54,7 +55,6 @@ type UnitBlock struct {
 	Before                          []hcl.Traversal `unitd:"before,optional" systemd:"Before"`
 	BindTo                          []hcl.Traversal `unitd:"bind_to,optional" systemd:"BindTo"`
 	BindsTo                         []hcl.Traversal `unitd:"binds_to,optional" systemd:"BindsTo"`
-	CollectMode                     string          `hcl:"collect_mode,optional" systemd:"CollectMode"`
 	ConditionACPower                string          `hcl:"condition_ac_power,optional" systemd:"ConditionACPower"`
 	ConditionArchitecture           string          `hcl:"condition_architecture,optional" systemd:"ConditionArchitecture"`
 	ConditionCPUFeature             string          `hcl:"condition_cpu_feature,optional" systemd:"ConditionCPUFeature"`
@@ -85,6 +85,7 @@ type UnitBlock struct {
 	ConditionPathIsEncrypted        string          `hcl:"condition_path_is_encrypted,optional" systemd:"ConditionPathIsEncrypted"`
 	ConditionPathIsMountPoint       string          `hcl:"condition_path_is_mount_point,optional" systemd:"ConditionPathIsMountPoint"`
 	ConditionPathIsReadWrite        string          `hcl:"condition_path_is_read_write,optional" systemd:"ConditionPathIsReadWrite"`
+	ConditionPathIsSocket           string          `hcl:"condition_path_is_socket,optional" systemd:"ConditionPathIsSocket"`
 	ConditionPathIsSymbolicLink     string          `hcl:"condition_path_is_symbolic_link,optional" systemd:"ConditionPathIsSymbolicLink"`
 	ConditionSecurity               string          `hcl:"condition_security,optional" systemd:"ConditionSecurity"`
 	ConditionUser                   string          `hcl:"condition_user,optional" systemd:"ConditionUser"`
@@ -95,13 +96,8 @@ type UnitBlock struct {
 	Description                     string          `hcl:"description,optional" systemd:"Description"`
 	Documentation                   string          `hcl:"documentation,optional" systemd:"Documentation"`
 	FailureAction                   string          `hcl:"failure_action,optional" systemd:"FailureAction"`
-	FailureActionExitStatus         string          `hcl:"failure_action_exit_status,optional" systemd:"FailureActionExitStatus"`
 	IgnoreOnIsolate                 bool            `hcl:"ignore_on_isolate,optional" systemd:"IgnoreOnIsolate"`
-	IgnoreOnSnapshot                string          `hcl:"ignore_on_snapshot,optional" systemd:"IgnoreOnSnapshot"`
-	JobRunningTimeoutSec            string          `hcl:"job_running_timeout_sec,optional" systemd:"JobRunningTimeoutSec"`
 	JobTimeoutAction                string          `hcl:"job_timeout_action,optional" systemd:"JobTimeoutAction"`
-	JobTimeoutRebootArgument        string          `hcl:"job_timeout_reboot_argument,optional" systemd:"JobTimeoutRebootArgument"`
-	JobTimeoutSec                   string          `hcl:"job_timeout_sec,optional" systemd:"JobTimeoutSec"`
 	JoinsNamespaceOf                []hcl.Traversal `unitd:"joins_namespace_of,optional" systemd:"JoinsNamespaceOf"`
 	OnFailure                       []hcl.Traversal `unitd:"on_failure,optional" systemd:"OnFailure"`
 	OnFailureIsolate                bool            `hcl:"on_failure_isolate,optional" systemd:"OnFailureIsolate"`
@@ -113,15 +109,12 @@ type UnitBlock struct {
 	PropagateReloadTo               []hcl.Traversal `unitd:"propagate_reload_to,optional" systemd:"PropagateReloadTo"`
 	PropagatesReloadTo              []hcl.Traversal `unitd:"propagates_reload_to,optional" systemd:"PropagatesReloadTo"`
 	PropagatesStopTo                []hcl.Traversal `unitd:"propagates_stop_to,optional" systemd:"PropagatesStopTo"`
-	RebootArgument                  string          `hcl:"reboot_argument,optional" systemd:"RebootArgument"`
 	RefuseManualStart               bool            `hcl:"refuse_manual_start,optional" systemd:"RefuseManualStart"`
 	RefuseManualStop                bool            `hcl:"refuse_manual_stop,optional" systemd:"RefuseManualStop"`
 	ReloadPropagatedFrom            []hcl.Traversal `unitd:"reload_propagated_from,optional" systemd:"ReloadPropagatedFrom"`
 	Requires                        []hcl.Traversal `unitd:"requires,optional" systemd:"Requires"`
 	RequiresMountsFor               []string        `hcl:"requires_mounts_for,optional" systemd:"RequiresMountsFor"`
-	RequiresOverridable             string          `hcl:"requires_overridable,optional" systemd:"RequiresOverridable"`
 	Requisite                       []hcl.Traversal `unitd:"requisite,optional" systemd:"Requisite"`
-	RequisiteOverridable            string          `hcl:"requisite_overridable,optional" systemd:"RequisiteOverridable"`
 	SourcePath                      string          `hcl:"source_path,optional" systemd:"SourcePath"`
 	StartLimitAction                string          `hcl:"start_limit_action,optional" systemd:"StartLimitAction"`
 	StartLimitBurst                 uint64          `hcl:"start_limit_burst,optional" systemd:"StartLimitBurst"`
@@ -130,7 +123,6 @@ type UnitBlock struct {
 	StopPropagatedFrom              []hcl.Traversal `unitd:"stop_propagated_from,optional" systemd:"StopPropagatedFrom"`
 	StopWhenUnneeded                bool            `hcl:"stop_when_unneeded,optional" systemd:"StopWhenUnneeded"`
 	SuccessAction                   string          `hcl:"success_action,optional" systemd:"SuccessAction"`
-	SuccessActionExitStatus         string          `hcl:"success_action_exit_status,optional" systemd:"SuccessActionExitStatus"`
 	SurviveFinalKillSignal          bool            `hcl:"survive_final_kill_signal,optional" systemd:"SurviveFinalKillSignal"`
 	Upholds                         []hcl.Traversal `unitd:"upholds,optional" systemd:"Upholds"`
 	Wants                           []hcl.Traversal `unitd:"wants,optional" systemd:"Wants"`

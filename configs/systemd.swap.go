@@ -25,18 +25,6 @@ type SwapBlock struct {
 	// more information.) Note that the usual specifier expansion is applied to this setting, literal
 	// percent characters should hence be written as %%.
 	Options string `hcl:"options,optional" systemd:"Options"`
-	// Swap priority to use when activating the swap device or file. This takes an integer. This setting is
-	// optional and ignored when the priority is set by pri= in the Options= key.
-	Priority string `hcl:"priority,optional" systemd:"Priority"`
-	// Configures the time to wait for the swapon command to finish. If a command does not exit within the
-	// configured time, the swap will be considered failed and be shut down again. All commands still
-	// running will be terminated forcibly via SIGTERM, and after another delay of this time with SIGKILL.
-	// (See KillMode= in
-	// <citerefentry><refentrytitle>systemd.kill</refentrytitle><manvolnum>5</manvolnum></citerefentry>.)
-	// Takes a unit-less value in seconds, or a time span value such as "5min 20s". Pass 0 to disable the
-	// timeout logic. Defaults to DefaultTimeoutStartSec= from the manager configuration file (see
-	// <citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>).
-	TimeoutSec string `hcl:"timeout_sec,optional" systemd:"TimeoutSec"`
 	// Takes an absolute path or a fstab-style identifier of a device node or file to use for paging. See
 	// <citerefentry
 	// project='man-pages'><refentrytitle>swapon</refentrytitle><manvolnum>8</manvolnum></citerefentry> for

@@ -2,64 +2,70 @@
 
 version: "3"
 
+vars:
+  SYSTEMD_PATH: tmp/systemd
+  MAN_FILES:
+    - systemd.automount
+    - systemd.device
+    - systemd.mount
+    - systemd.path
+    - systemd.scope
+    - systemd.service
+    - systemd.slice
+    - systemd.socket
+    - systemd.swap
+    - systemd.timer
+    - systemd.target
+    - systemd.unit
+
 tasks:
+  default:
+    cmds:
+      - go run .
+
+  clone-or-pull-systemd:
+    desc: Clone systemd repo if it doesn't exist, otherwise pull latest changes
+    cmds:
+      - |
+        if [ -d "{{.SYSTEMD_PATH}}" ]; then
+          cd {{.SYSTEMD_PATH}} && git pull
+        else
+          git clone https://github.com/systemd/systemd {{.SYSTEMD_PATH}}
+        fi
+
   gen:
+    deps:
+      - clone-or-pull-systemd
     cmds:
       - mkdir -p tmp
-      - task: extract-config
+      - mkdir -p ./tmp/gperf
+
+      - task: extract-gperfs
+      - ./scripts/extract_dump_config.sh "{{.SYSTEMD_PATH}}" ./tmp/gperf/parser_type.jsonl
       - task: gen-files
 
   gen-files:
     internal: true
     deps:
       - for:
-          - automount
-          - device
-          - mount
-          - path
-          - scope
-          - service
-          - slice
-          - socket
-          - swap
-          - timer
-          - target
-          - unit
+          var: MAN_FILES
         task: gen-file
         vars:
-          UNIT: "{{ .ITEM }}"
+          MAN: "{{ .ITEM }}"
     cmds:
       - gofmt -w .
 
   gen-file:
     internal: true
     cmds:
-      - go run ./cmd/gen --man systemd.{{.UNIT}} > ./configs/{{.UNIT}}.go
-
-  extract-config:
-    internal: true
-    deps:
-      - task: extract-gperfs
-      - task: extract-dump-config
-    cmds:
-      - rm -rf out
-      - mkdir -p out
-
-      - |
-        ./scripts/join.py ./tmp/parser_type.jsonl ./tmp/gperf_*.jsonl \
-        > out/directives.jsonl
-      - jq -c -s '
-        sort_by(.system, .section, .property)
-        | .[]
-        ' out/directives.jsonl > out/directives.sorted.jsonl
-      - mv out/directives.sorted.jsonl out/directives.jsonl
+      - go run ./cmd/gen --man {{.MAN}} > ./configs/{{.MAN}}.go
 
   extract-gperfs:
     internal: true
     silent: true
     vars:
       FILES:
-        sh: find systemd/src -type f \( -name '*.gperf' -o -name '*.gperf.in' \)
+        sh: find tmp/systemd/src -type f \( -name '*.gperf' -o -name '*.gperf.in' \)
     deps:
       - for:
           var: FILES
@@ -71,68 +77,4 @@ tasks:
     internal: true
     silent: true
     cmds:
-      - |
-        mkdir -p tmp
-        system=$(sed -E 's#.*/##; s/-gperf\.gperf(\.in)?$//' <<< "{{.ITEM}}")
-
-        rg '^[A-Za-z0-9_.]+,' {{.ITEM}} \
-        | awk -F ',' '
-        {
-          # First three columns
-          c1 = $1
-          c2 = $2
-          c3 = $3
-
-          split(c1, a, ".")
-          section=a[1]
-          key=a[2]
-
-          # Rebuild column 4 (may contain commas)
-          c4 = $4
-          for (i = 5; i <= NF; i++)
-          c4 = c4 "," $i
-
-          # Trim whitespace
-          gsub(/^[ \t]+|[ \t]+$/, "", c1)
-          gsub(/^[ \t]+|[ \t]+$/, "", c2)
-          gsub(/^[ \t]+|[ \t]+$/, "", c3)
-          gsub(/^[ \t]+|[ \t]+$/, "", c4)
-
-          print section "|" key "|" c2 "|" c3 "|" c4
-        }' \
-        | jq -c \
-          --arg system $system \
-          -R '
-          split("|") |
-          {
-            system:  (if $system == "load-fragment" then "core" else $system end),
-            section:  .[0],
-            property: .[1],
-            parser:   .[2],
-            ltype:    .[3],
-            offset:   .[4]
-          }
-        ' > "./tmp/gperf_$system.jsonl"
-
-  extract-dump-config:
-    silent: true
-    internal: true
-    cmds:
-      - |
-        cat systemd/src/core/load-fragment.c \
-        | grep '^[[:space:]]*{[[:space:]]*config_parse' \
-        | sed -E 's/[{}]//g' \
-        | awk -F ',' '{
-            gsub(/^[[:space:]]+|[[:space:]]+$/, "", $1)
-            gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2)
-            gsub(/"/, "", $2)
-            print $1 "," $2
-        }' \
-        | jq -c \
-          -R '
-          split(",") |
-          {
-            parser:    .[0],
-            type:  .[1],
-          }
-        ' > ./tmp/parser_type.jsonl
+      - ./scripts/extract_gperf.sh "{{.ITEM}}" "./tmp/gperf"

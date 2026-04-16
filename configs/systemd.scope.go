@@ -20,7 +20,6 @@ package configs
 // remain children of the original process that forked them off, it is also the job of that process to
 // collect their exit statuses and act on them as needed.
 type ScopeBlock struct {
-	OOMPolicy string `hcl:"oom_policy,optional" systemd:"OOMPolicy"`
 	// Configures a maximum time for the scope to run. If this is used and the scope has been active for
 	// longer than the specified time it is terminated and put into a failure state. Pass infinity (the
 	// default) to configure no runtime limit.

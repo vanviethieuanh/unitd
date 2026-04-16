@@ -138,23 +138,6 @@ type SocketBlock struct {
 	// Disabled by default.
 	//
 	DeferAcceptSec int `hcl:"defer_accept_sec,optional" systemd:"DeferAcceptSec"`
-	// Takes a boolean argument, or patient. May only be used when Accept=no. If enabled, job mode lenient
-	// instead of replace is used when triggering the service, which means currently activating/running
-	// units that conflict with the service won't be disturbed/brought down. Furthermore, if a conflict
-	// exists, the socket unit will wait for current job queue to complete and potentially defer the
-	// activation by then. An upper limit of total time to wait can be configured via DeferTriggerMaxSec=.
-	// If set to yes, the socket unit will fail if all jobs have finished or the timeout has been reached
-	// but the conflict remains. If patient, always wait until DeferTriggerMaxSec= elapses. Defaults to no.
-	//
-	// This setting is particularly useful if the socket unit should stay active across
-	// switch-root/soft-reboot operations while the triggered service is stopped.
-	//
-	DeferTrigger string `hcl:"defer_trigger,optional" systemd:"DeferTrigger"`
-	// Configures the maximum time to defer the triggering when DeferTrigger= is enabled. If the service
-	// cannot be activated within the specified time, the socket will be considered failed and get
-	// terminated. Takes a unit-less value in seconds, or a time span value such as "5min 20s". Pass 0 or
-	// infinity to disable the timeout logic (the default).
-	DeferTriggerMaxSec string `hcl:"defer_trigger_max_sec,optional" systemd:"DeferTriggerMaxSec"`
 	// If listening on a file system socket or FIFO, the parent directories are automatically created if
 	// needed. This option specifies the file system access mode used when creating these directories.
 	// Takes an access mode in octal notation. Defaults to 0755.
@@ -177,15 +160,6 @@ type SocketBlock struct {
 	// removed, respectively. Multiple command lines may be specified following the same scheme as used for
 	// ExecStartPre= of service unit files.
 	ExecStopPre [][]string `hcl:"exec_stop_pre,optional" systemd:"ExecStopPre"`
-	// Assigns a name to all file descriptors this socket unit encapsulates. This is useful to help
-	// activated services identify specific file descriptors, if multiple fds are passed. Services may use
-	// the
-	// <citerefentry><refentrytitle>sd_listen_fds_with_names</refentrytitle><manvolnum>3</manvolnum></citerefentry>
-	// call to acquire the names configured for the received file descriptors. Names may contain any ASCII
-	// character, but must exclude control characters and :, and must be at most 255 characters in length.
-	// If this setting is not used, the file descriptor name defaults to the name of the socket unit
-	// (including its .socket suffix) when Accept=no, connection otherwise.
-	FileDescriptorName string `hcl:"file_descriptor_name,optional" systemd:"FileDescriptorName"`
 	// Takes a boolean argument. May only be used when Accept=no. If yes, the socket's buffers are cleared
 	// after the triggered service exited. This causes any pending data to be flushed and any pending
 	// incoming connections to be rejected. If no, the socket's buffers will not be cleared, permitting the
@@ -565,48 +539,14 @@ type SocketBlock struct {
 	// the incoming or outgoing connections of the socket, respectively. See <ulink
 	// url="https://docs.kernel.org/admin-guide/LSM/Smack.html">Smack</ulink> for details.
 	SmackLabelIPOut string `hcl:"smack_label_ip_out,optional" systemd:"SmackLabelIPOut"`
-	// Takes a UNIX user/group name. When specified, all AF_UNIX sockets, FIFO nodes, and message queues
-	// are owned by the specified user and group. If unset (the default), the nodes are owned by the root
-	// user/group (if run in system context) or the invoking user/group (if run in user context). If only a
-	// user is specified but no group, then the group is derived from the user's default group.
-	SocketGroup string `hcl:"socket_group,optional" systemd:"SocketGroup"`
 	// If listening on a file system socket, FIFO, or message queue, this option specifies the file system
 	// access mode used when creating the file node. Takes an access mode in octal notation. Defaults to
 	// 0666.
 	SocketMode os.FileMode `unitd:"socket_mode,optional" systemd:"SocketMode"`
-	// Takes one of udplite, sctp or mptcp. The socket will use the UDP-Lite (IPPROTO_UDPLITE), SCTP
-	// (IPPROTO_SCTP) or MPTCP (IPPROTO_MPTCP) protocol, respectively.
-	SocketProtocol string `hcl:"socket_protocol,optional" systemd:"SocketProtocol"`
-	// Takes a UNIX user/group name. When specified, all AF_UNIX sockets, FIFO nodes, and message queues
-	// are owned by the specified user and group. If unset (the default), the nodes are owned by the root
-	// user/group (if run in system context) or the invoking user/group (if run in user context). If only a
-	// user is specified but no group, then the group is derived from the user's default group.
-	SocketUser string `hcl:"socket_user,optional" systemd:"SocketUser"`
-	// Takes a list of file system paths. The specified paths will be created as symlinks to the AF_UNIX
-	// socket path or FIFO path of this socket unit. If this setting is used, only one AF_UNIX socket in
-	// the file system or one FIFO may be configured for the socket unit. Use this option to manage one or
-	// more symlinked alias names for a socket, binding their lifecycle together. Note that if creation of
-	// a symlink fails this is not considered fatal for the socket unit, and the socket unit may still
-	// start. If an empty string is assigned, the list of paths is reset. Defaults to an empty list.
-	Symlinks string `hcl:"symlinks,optional" systemd:"Symlinks"`
 	// Takes a string value. Controls the TCP congestion algorithm used by this socket. Should be one of
 	// westwood, reno, cubic, lp or any other available algorithm supported by the IP stack. This setting
 	// applies only to stream sockets.
 	TCPCongestion string `hcl:"tcp_congestion,optional" systemd:"TCPCongestion"`
-	// Configures the time to wait for the commands specified in ExecStartPre=, ExecStartPost=,
-	// ExecStopPre= and ExecStopPost= to finish. If a command does not exit within the configured time, the
-	// socket will be considered failed and be shut down again. All commands still running will be
-	// terminated forcibly via SIGTERM, and after another delay of this time with SIGKILL. (See KillMode=
-	// in
-	// <citerefentry><refentrytitle>systemd.kill</refentrytitle><manvolnum>5</manvolnum></citerefentry>.)
-	// Takes a unit-less value in seconds, or a time span value such as "5min 20s". Pass 0 to disable the
-	// timeout logic. Defaults to DefaultTimeoutStartSec= from the manager configuration file (see
-	// <citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>).
-	TimeoutSec string `hcl:"timeout_sec,optional" systemd:"TimeoutSec"`
-	// Takes one of off, us (alias: usec, μs) or ns (alias: nsec). This controls the SO_TIMESTAMP or
-	// SO_TIMESTAMPNS socket options, and enables whether ingress network traffic shall carry timestamping
-	// metadata. Defaults to off.
-	Timestamping string `hcl:"timestamping,optional" systemd:"Timestamping"`
 	// Takes a boolean value. Controls the IP_TRANSPARENT/IPV6_TRANSPARENT socket option. Defaults to
 	// false.
 	Transparent bool `hcl:"transparent,optional" systemd:"Transparent"`

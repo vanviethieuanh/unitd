@@ -58,15 +58,6 @@ type MountBlock struct {
 	// project='man-pages'><refentrytitle>mount</refentrytitle><manvolnum>8</manvolnum></citerefentry>'s
 	// <parameter>-s</parameter> switch. Defaults to off.
 	SloppyOptions bool `hcl:"sloppy_options,optional" systemd:"SloppyOptions"`
-	// Configures the time to wait for the mount command to finish. If a command does not exit within the
-	// configured time, the mount will be considered failed and be shut down again. All commands still
-	// running will be terminated forcibly via SIGTERM, and after another delay of this time with SIGKILL.
-	// (See KillMode= in
-	// <citerefentry><refentrytitle>systemd.kill</refentrytitle><manvolnum>5</manvolnum></citerefentry>.)
-	// Takes a unit-less value in seconds, or a time span value such as "5min 20s". Pass 0 to disable the
-	// timeout logic. The default value is set from DefaultTimeoutStartSec= option in
-	// <citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>.
-	TimeoutSec string `hcl:"timeout_sec,optional" systemd:"TimeoutSec"`
 	// Takes a string for the file system type. See <citerefentry
 	// project='man-pages'><refentrytitle>mount</refentrytitle><manvolnum>8</manvolnum></citerefentry> for
 	// details. This setting is optional.
