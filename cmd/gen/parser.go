@@ -2,10 +2,9 @@ package main
 
 import (
 	"encoding/xml"
+	"fmt"
 	"io"
 	"strings"
-
-	"github.com/charmbracelet/log"
 )
 
 type RefEntry struct {
@@ -69,15 +68,15 @@ type Entry struct {
 	Content string `xml:",innerxml"`
 }
 
-func parseUnit(r io.Reader, directivesList []Directive) *Unit {
+func parseUnit(r io.Reader, directivesList []Directive) (*Unit, error) {
 	data, err := io.ReadAll(r)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("reading input: %w", err)
 	}
 
 	var refEntry RefEntry
 	if err := xml.Unmarshal(data, &refEntry); err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("parsing XML: %w", err)
 	}
 
 	unitName := parseName(refEntry)
@@ -106,7 +105,7 @@ func parseUnit(r io.Reader, directivesList []Directive) *Unit {
 		Purpose:     parsePurpose(refEntry),
 		Description: parseDescription(refEntry),
 		Options:     options,
-	}
+	}, nil
 }
 
 func parseName(refEntry RefEntry) string {

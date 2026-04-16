@@ -39,7 +39,10 @@ func NewDirective(section, key, system, typeStr string) (Directive, error) {
 		return Directive{}, fmt.Errorf("failed to parse type expression %q: %w", typeStr, err)
 	}
 
-	goType, deps := parsedType.toGoType()
+	goType, deps, err := parsedType.toGoType()
+	if err != nil {
+		return Directive{}, fmt.Errorf("failed to convert type %q to Go: %w", typeStr, err)
+	}
 
 	return Directive{
 		Identifier: DirectiveIdentifier{

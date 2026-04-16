@@ -27,7 +27,10 @@ func main() {
 		log.Fatal("--man is required (e.g. --man systemd.timer)")
 	}
 
-	directives := LoadAllDirectives(gperfDir)
+	directives, err := LoadAllDirectives(gperfDir)
+	if err != nil {
+		log.Fatal(err)
+	}
 	if *man == "systemd.unit" {
 		fmt.Print(genCommon(directives))
 		return
@@ -47,7 +50,10 @@ func main() {
 	}
 	defer f.Close()
 
-	unit := parseUnit(f, directives)
+	unit, err := parseUnit(f, directives)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	var code strings.Builder
 

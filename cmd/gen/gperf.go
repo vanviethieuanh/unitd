@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,10 +33,10 @@ var nullParserTypes = map[string]string{
 // loadGperfDirectives reads all gperf_*.jsonl files in dir (skipping
 // parser_type.jsonl) and converts each record to a Directive using parserMap
 // to resolve the type string from the parser name.
-func loadGperfDirectives(dir string, parserMap map[string]string) []Directive {
+func loadGperfDirectives(dir string, parserMap map[string]string) ([]Directive, error) {
 	files, err := filepath.Glob(filepath.Join(dir, "gperf_*.jsonl"))
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("glob gperf files: %w", err)
 	}
 
 	var result []Directive
@@ -43,7 +44,7 @@ func loadGperfDirectives(dir string, parserMap map[string]string) []Directive {
 	for _, path := range files {
 		f, err := os.Open(path)
 		if err != nil {
-			log.Fatalf("open %s: %v", path, err)
+			return nil, fmt.Errorf("open %s: %w", path, err)
 		}
 
 		scanner := bufio.NewScanner(f)
@@ -52,7 +53,8 @@ func loadGperfDirectives(dir string, parserMap map[string]string) []Directive {
 
 			var gr gperfRecord
 			if err := json.Unmarshal(line, &gr); err != nil {
-				log.Fatalf("unmarshal %s: %v", path, err)
+				f.Close()
+				return nil, fmt.Errorf("unmarshal %s: %w", path, err)
 			}
 
 			typeStr, ok := parserMap[gr.Parser]
@@ -84,25 +86,19 @@ func loadGperfDirectives(dir string, parserMap map[string]string) []Directive {
 		f.Close()
 
 		if err := scanner.Err(); err != nil {
-			log.Fatalf("scan %s: %v", path, err)
+			return nil, fmt.Errorf("scan %s: %w", path, err)
 		}
 	}
 
-	return result
-}
-
-// loadParserMapDefault loads the parser_type.jsonl from gperfDir.
-func loadParserMapDefault(gperfDir string) map[string]string {
-	pm, err := loadParserMap(filepath.Join(gperfDir, "parser_type.jsonl"))
-	if err != nil {
-		log.Fatalf("load parser map: %v", err)
-	}
-	return pm
+	return result, nil
 }
 
 // LoadAllDirectives is the single entry-point: load parser map and all gperf
 // records from gperfDir, returning the merged []Directive slice.
-func LoadAllDirectives(gperfDir string) []Directive {
-	pm := loadParserMapDefault(gperfDir)
+func LoadAllDirectives(gperfDir string) ([]Directive, error) {
+	pm, err := loadParserMap(filepath.Join(gperfDir, "parser_type.jsonl"))
+	if err != nil {
+		return nil, fmt.Errorf("load parser map: %w", err)
+	}
 	return loadGperfDirectives(gperfDir, pm)
 }

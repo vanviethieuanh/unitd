@@ -170,9 +170,9 @@ type TypeExpr struct {
 	Repeated bool
 }
 
-func (e *TypeExpr) toGoType() (goType string, deps []string) {
+func (e *TypeExpr) toGoType() (goType string, deps []string, err error) {
 	if e == nil {
-		return "any", nil
+		return "any", nil, nil
 	}
 
 	var (
@@ -190,7 +190,7 @@ func (e *TypeExpr) toGoType() (goType string, deps []string) {
 		if baseType == "" {
 			baseType = bt
 		} else if baseType != bt {
-			panic(fmt.Sprintf("nested type mismatch: %q vs %q", baseType, bt))
+			return "", nil, fmt.Errorf("nested type mismatch: %q vs %q", baseType, bt)
 		}
 
 		if e.Inner != nil {
@@ -209,7 +209,7 @@ func (e *TypeExpr) toGoType() (goType string, deps []string) {
 		deps = append(deps, p)
 	}
 
-	return goType, deps
+	return goType, deps, nil
 }
 
 func parseType(tokens []token) (*TypeExpr, int, error) {

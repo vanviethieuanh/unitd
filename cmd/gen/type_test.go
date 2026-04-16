@@ -101,10 +101,10 @@ func TestParseTypeExpr(t *testing.T) {
 
 func TestTypeExpr_toGoType_Functional(t *testing.T) {
 	tests := []struct {
-		name      string
-		expr      *TypeExpr
-		wantType  string
-		wantPanic bool
+		name     string
+		expr     *TypeExpr
+		wantType string
+		wantErr  bool
 	}{
 		{
 			name:     "nil expression",
@@ -152,31 +152,33 @@ func TestTypeExpr_toGoType_Functional(t *testing.T) {
 			wantType: "[][][]int",
 		},
 		{
-			name: "nested mismatch panics",
+			name: "nested mismatch returns error",
 			expr: &TypeExpr{
 				Base: TypeString,
 				Inner: &TypeExpr{
 					Base: TypeBoolean,
 				},
 			},
-			wantPanic: true,
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			defer func() {
-				if r := recover(); r != nil {
-					if !tt.wantPanic {
-						t.Errorf("unexpected panic: %v", r)
-					}
-				} else if tt.wantPanic {
-					t.Errorf("expected panic but did not occur")
-				}
-			}()
+			gotType, _, err := tt.expr.toGoType()
 
-			gotType, _ := tt.expr.toGoType()
-			if !tt.wantPanic && gotType != tt.wantType {
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if gotType != tt.wantType {
 				t.Errorf("toGoType() = %q, want %q", gotType, tt.wantType)
 			}
 		})
