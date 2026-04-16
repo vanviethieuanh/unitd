@@ -1,13 +1,9 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
-	"io"
 	"strings"
-
-	"github.com/charmbracelet/log"
 )
 
 var IncludeExec = map[string]struct{}{
@@ -93,27 +89,6 @@ func WriteDirective(builder *strings.Builder, d *Directive) {
 		fmt.Fprintf(builder, "\t%s %s `unitd:\"%s,optional\" systemd:\"%s\"`\n",
 			fieldName, d.Type, snakeName, systemdName)
 	}
-}
-
-func getDirectives(f io.Reader) []Directive {
-	scanner := bufio.NewScanner(f)
-
-	var result []Directive
-
-	for scanner.Scan() {
-		var d Directive
-		if err := json.Unmarshal(scanner.Bytes(), &d); err != nil {
-			log.Fatalf("decode error: %v", err)
-		}
-
-		result = append(result, d)
-	}
-
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
-
-	return result
 }
 
 type Unit struct {

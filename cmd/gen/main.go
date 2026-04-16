@@ -14,7 +14,14 @@ var gperfDir = filepath.Join("tmp", "gperf")
 
 func main() {
 	man := flag.String("man", "", "systemd man page name (e.g. systemd.timer)")
+	logLevel := flag.String("log-level", "info", "log level (debug, info, warn, error, fatal)")
 	flag.Parse()
+
+	level, err := log.ParseLevel(*logLevel)
+	if err != nil {
+		log.Fatal("invalid log level", "level", *logLevel)
+	}
+	log.SetLevel(level)
 
 	if *man == "" {
 		log.Fatal("--man is required (e.g. --man systemd.timer)")

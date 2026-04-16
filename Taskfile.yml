@@ -60,6 +60,28 @@ tasks:
     cmds:
       - go run ./cmd/gen --man {{.MAN}} > ./configs/{{.MAN}}.go
 
+  test-gen:
+    desc: Verify that cmd/gen produces identical output for the current systemd version
+    deps:
+      - clone-or-pull-systemd
+    cmds:
+      - mkdir -p tmp/test-gen
+      - defer: rm -rf tmp/test-gen
+      - task: extract-gperfs
+      - ./scripts/extract_dump_config.sh "{{.SYSTEMD_PATH}}" ./tmp/gperf/parser_type.jsonl
+      - for:
+          var: MAN_FILES
+        task: test-gen-file
+        vars:
+          MAN: "{{ .ITEM }}"
+
+  test-gen-file:
+    internal: true
+    cmds:
+      - cmd: go run ./cmd/gen --log-level error --man {{.MAN}} | gofmt > tmp/test-gen/{{.MAN}}.go
+        silent: true
+      - diff -u ./configs/{{.MAN}}.go tmp/test-gen/{{.MAN}}.go
+
   extract-gperfs:
     internal: true
     silent: true
