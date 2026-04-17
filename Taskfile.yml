@@ -17,6 +17,10 @@ vars:
     - systemd.timer
     - systemd.target
     - systemd.unit
+  SHARED_MAN_FILES:
+    - systemd.exec
+    - systemd.kill
+    - systemd.resource-control
 
 env:
   PIP: .venv/bin/pip
@@ -39,6 +43,7 @@ tasks:
 
   gen:
     deps:
+      - setup-python
       - clone-or-pull-systemd
     cmds:
       - task: gen-files
@@ -56,8 +61,10 @@ tasks:
 
   gen-file:
     internal: true
+    vars:
+      SHARED_MAN_FLAGS: '{{range .SHARED_MAN_FILES}}--shared-man {{.}} {{end}}'
     cmds:
-      - $PYTHON -m scripts.gen --man {{.MAN}} --shared-man systemd.exec --shared-man systemd.kill --shared-man systemd.resource-control --log-level error > ./configs/{{.MAN}}.go
+      - $PYTHON -m scripts.gen --man {{.MAN}} {{.SHARED_MAN_FLAGS}} --log-level error > ./configs/{{.MAN}}.go
 
   test-gen:
     desc: Verify that scripts/gen produces identical output for the current systemd version
@@ -74,8 +81,10 @@ tasks:
 
   test-gen-file:
     internal: true
+    vars:
+      SHARED_MAN_FLAGS: '{{range .SHARED_MAN_FILES}}--shared-man {{.}} {{end}}'
     cmds:
-      - cmd: $PYTHON -m scripts.gen --man {{.MAN}} --shared-man systemd.exec --shared-man systemd.kill --shared-man systemd.resource-control --log-level error | gofmt > tmp/test-gen/{{.MAN}}.go
+      - cmd: $PYTHON -m scripts.gen --man {{.MAN}} {{.SHARED_MAN_FLAGS}} --log-level error | gofmt > tmp/test-gen/{{.MAN}}.go
         silent: true
       - diff -u ./configs/{{.MAN}}.go tmp/test-gen/{{.MAN}}.go
 
