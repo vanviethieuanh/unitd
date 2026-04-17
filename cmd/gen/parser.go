@@ -9,10 +9,19 @@ import (
 )
 
 type RefEntry struct {
-	XMLName  xml.Name   `xml:"refentry"`
-	Meta     RefMeta    `xml:"refmeta"`
-	NameDiv  RefNameDiv `xml:"refnamediv"`
-	Sections []RefSect1 `xml:"refsect1"`
+	XMLName     xml.Name       `xml:"refentry"`
+	Meta        RefMeta        `xml:"refmeta"`
+	NameDiv     RefNameDiv     `xml:"refnamediv"`
+	SynopsisDiv RefSynopsisDiv `xml:"refsynopsisdiv"`
+	Sections    []RefSect1     `xml:"refsect1"`
+}
+
+type RefSynopsisDiv struct {
+	Para SynopsisPara `xml:"para"`
+}
+
+type SynopsisPara struct {
+	FileNames []string `xml:"filename"`
 }
 
 type RefMeta struct {
@@ -69,7 +78,7 @@ type Entry struct {
 	Content string `xml:",innerxml"`
 }
 
-func parseUnit(r io.Reader, directivesList []Directive) (*Unit, error) {
+func parseUnit(r io.Reader, directivesList []Directive, extraDescriptions map[string]string) (*Unit, error) {
 	data, err := io.ReadAll(r)
 	if err != nil {
 		return nil, fmt.Errorf("reading input: %w", err)
@@ -96,7 +105,11 @@ func parseUnit(r io.Reader, directivesList []Directive) (*Unit, error) {
 		}
 		seen[key] = struct{}{}
 
-		d.Description = parsedOptions[key]
+		if desc, ok := parsedOptions[key]; ok {
+			d.Description = desc
+		} else if desc, ok := extraDescriptions[key]; ok {
+			d.Description = desc
+		}
 		options = append(options, d)
 	}
 
@@ -138,23 +151,24 @@ func parseOptions(refEntry RefEntry) map[string]string {
 	options := make(map[string]string)
 
 	for _, section := range refEntry.Sections {
-		if section.Title == "Options" || strings.HasSuffix(section.Title, "Options") {
-			for _, entry := range section.VariableList.Entries {
-				if entry.ListItem.Table != nil {
-					for _, term := range entry.Terms {
-						cleanTerm := strings.TrimSpace(strings.TrimSuffix(term, "="))
-						desc := extractTableDescription(&entry, cleanTerm)
-						if desc != "" {
-							options[cleanTerm] = desc
-						}
+		if section.Title == "Description" || len(section.VariableList.Entries) == 0 {
+			continue
+		}
+		for _, entry := range section.VariableList.Entries {
+			if entry.ListItem.Table != nil {
+				for _, term := range entry.Terms {
+					cleanTerm := strings.TrimSpace(strings.TrimSuffix(term, "="))
+					desc := extractTableDescription(&entry, cleanTerm)
+					if desc != "" {
+						options[cleanTerm] = desc
 					}
-				} else {
-					for _, term := range entry.Terms {
-						cleanTerm := strings.TrimSpace(strings.TrimSuffix(term, "="))
-						desc := extractFullDescription(&entry)
-						if desc != "" {
-							options[cleanTerm] = desc
-						}
+				}
+			} else {
+				for _, term := range entry.Terms {
+					cleanTerm := strings.TrimSpace(strings.TrimSuffix(term, "="))
+					desc := extractFullDescription(&entry)
+					if desc != "" {
+						options[cleanTerm] = desc
 					}
 				}
 			}
@@ -208,6 +222,45 @@ func joinCleanedTexts(texts []string) string {
 }
 
 var xmlTagRe = regexp.MustCompile(`</?(?:literal|filename|varname|replaceable|option|constant|command|emphasis)>`)
+
+// parseApplicableTypes extracts unit type names from <refsynopsisdiv>.
+// For example, systemd.kill.xml lists .service, .socket, .mount, .swap, .scope
+// and this returns ["service", "socket", "mount", "swap", "scope"].
+func parseApplicableTypes(r io.Reader) ([]string, error) {
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("reading input: %w", err)
+	}
+
+	var refEntry RefEntry
+	if err := xml.Unmarshal(data, &refEntry); err != nil {
+		return nil, fmt.Errorf("parsing XML: %w", err)
+	}
+
+	var types []string
+	for _, fn := range refEntry.SynopsisDiv.Para.FileNames {
+		// fn is like "service.service" — extract extension after the dot
+		if idx := strings.LastIndex(fn, "."); idx >= 0 {
+			types = append(types, fn[idx+1:])
+		}
+	}
+	return types, nil
+}
+
+// parseDescriptions extracts option key->description mappings from an XML man page.
+func parseDescriptions(r io.Reader) (map[string]string, error) {
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("reading input: %w", err)
+	}
+
+	var refEntry RefEntry
+	if err := xml.Unmarshal(data, &refEntry); err != nil {
+		return nil, fmt.Errorf("parsing XML: %w", err)
+	}
+
+	return parseOptions(refEntry), nil
+}
 
 func cleanText(text string) string {
 	text = strings.TrimSpace(text)

@@ -7,10 +7,26 @@ if [ -z "$item" ]; then
     exit 1
 fi
 
+outdir="${2:-}"
+if [ -z "$outdir" ]; then
+    echo "Output directory is required" >&2
+    exit 1
+fi
+
+PYTHON="${PYTHON:-.venv/bin/python3}"
+
 mkdir -p tmp
 system=$(printf '%s\n' "$item" | sed -E 's#.*/##; s/-gperf\.gperf(\.in)?$//')
 
-rg '^[A-Za-z0-9_.]+,' "$item" |
+# If the file is a Jinja2 template, expand it first.
+if printf '%s\n' "$item" | grep -q '\.in$'; then
+    input=$("$PYTHON" "$(dirname "$0")/expand_jinja2.py" "$item")
+else
+    input=$(cat "$item")
+fi
+
+printf '%s\n' "$input" |
+rg '^[A-Za-z0-9_.]+,' |
     awk -F ',' '
 {
   c1 = $1

@@ -3,6 +3,7 @@
 package configs
 
 import (
+	"os"
 	"syscall"
 )
 
@@ -18,6 +19,418 @@ import (
 // the service. The command allows creating and units dynamically and transiently from the command
 // line.
 type ServiceBlock struct {
+	AllowedCPUs        string `hcl:"allowed_cp_us,optional" systemd:"AllowedCPUs"`
+	AllowedMemoryNodes string `hcl:"allowed_memory_nodes,optional" systemd:"AllowedMemoryNodes"`
+	// Controls which capabilities to include in the ambient capability set for the executed process. Takes
+	// a whitespace-separated list of capability names, e.g. CAP_SYS_ADMIN, CAP_DAC_OVERRIDE,
+	// CAP_SYS_PTRACE. This option may appear more than once, in which case the ambient capability sets are
+	// merged (see the above examples in CapabilityBoundingSet=). If the list of capabilities is prefixed
+	// with ~, all but the listed capabilities will be included, the effect of the assignment inverted. If
+	// the empty string is assigned to this option, the ambient capability set is reset to the empty
+	// capability set, and all prior settings have no effect. If set to ~ (without any further argument),
+	// the ambient capability set is reset to the full set of available capabilities, also undoing any
+	// previous settings. Note that adding capabilities to the ambient capability set adds them to the
+	// process's inherited capability set.
+	//
+	// Ambient capability sets are useful if you want to execute a process as a non-privileged user but
+	// still want to give it some capabilities. Note that, in this case, option keep-caps is automatically
+	// added to SecureBits= to retain the capabilities over the user change. AmbientCapabilities= does not
+	// affect commands prefixed with +.
+	//
+	AmbientCapabilities []string `hcl:"ambient_capabilities,optional" systemd:"AmbientCapabilities"`
+	// Takes a profile name as argument. The process executed by the unit will switch to this profile when
+	// started. Profiles must already be loaded in the kernel, or the unit will fail. If prefixed by -, all
+	// errors will be ignored. This setting has no effect if AppArmor is not enabled. This setting does not
+	// affect commands prefixed with +.
+	AppArmorProfile string `hcl:"app_armor_profile,optional" systemd:"AppArmorProfile"`
+	// Accepts a list of BPF attach points to allow or any to allow everything. Defaults to none. The
+	// accepted values are: <xi:include href="bpf-delegate.xml" xpointer="bpf_delegate_attach_type"/> This
+	// will set the delegate_attachs bpffs mount option.
+	//
+	// Requires PrivateBPF=yes to be effective, see PrivateBPF= more details.
+	//
+	BPFDelegateAttachments []string `hcl:"bpf_delegate_attachments,optional" systemd:"BPFDelegateAttachments"`
+	// Accepts a list of BPF commands to allow or any to allow everything. Defaults to none. The accepted
+	// values are: <xi:include href="bpf-delegate.xml" xpointer="bpf_delegate_cmd"/> This will set the
+	// delegate_cmds bpffs mount option.
+	//
+	// Requires PrivateBPF=yes to be effective, see PrivateBPF= more details.
+	//
+	BPFDelegateCommands []string `hcl:"bpf_delegate_commands,optional" systemd:"BPFDelegateCommands"`
+	// Accepts a list of BPF maps to allow or any to allow everything. Defaults to none. The accepted
+	// values are: <xi:include href="bpf-delegate.xml" xpointer="bpf_delegate_map_type"/> This will set the
+	// delegate_maps bpffs mount option.
+	//
+	// Requires PrivateBPF=yes to be effective, see PrivateBPF= more details.
+	//
+	BPFDelegateMaps []string `hcl:"bpf_delegate_maps,optional" systemd:"BPFDelegateMaps"`
+	// Accepts a list of BPF programs to allow or any to allow everything. Defaults to none. The accepted
+	// values are: <xi:include href="bpf-delegate.xml" xpointer="bpf_delegate_prog_type"/> This will set
+	// the delegate_progs bpffs mount option.
+	//
+	// Requires PrivateBPF=yes to be effective, see PrivateBPF= more details.
+	//
+	BPFDelegatePrograms []string `hcl:"bpf_delegate_programs,optional" systemd:"BPFDelegatePrograms"`
+	BPFProgram          []string `hcl:"bpf_program,optional" systemd:"BPFProgram"`
+	// Takes a boolean argument. If true, sockets from <citerefentry>
+	// <refentrytitle>systemd-journald.socket</refentrytitle><manvolnum>8</manvolnum></citerefentry> will
+	// be bind mounted into the mount namespace. This is particularly useful when a different instance of
+	// /run/ is employed, to make sure processes running in the namespace can still make use of
+	// <citerefentry><refentrytitle>sd-journal</refentrytitle><manvolnum>3</manvolnum></citerefentry>.
+	//
+	// This option is implied when LogNamespace= is used, when MountAPIVFS=yes, or when PrivateDevices=yes
+	// is used in conjunction with either RootDirectory= or RootImage=.
+	//
+	BindLogSockets       bool     `hcl:"bind_log_sockets,optional" systemd:"BindLogSockets"`
+	BindNetworkInterface []string `hcl:"bind_network_interface,optional" systemd:"BindNetworkInterface"`
+	// Configures unit-specific bind mounts. A bind mount makes a particular file or directory available at
+	// an additional place in the unit's view of the file system. Any bind mounts created with this option
+	// are specific to the unit, and are not visible in the host's mount table. This option expects a
+	// whitespace separated list of bind mount definitions. Each definition consists of a colon-separated
+	// triple of source path, destination path and option string, where the latter two are optional. If
+	// only a source path is specified the source and destination is taken to be the same. The option
+	// string may be either rbind or norbind for configuring a recursive or non-recursive bind mount. If
+	// the destination path is omitted, the option string must be omitted too. Each bind mount definition
+	// may be prefixed with -, in which case it will be ignored when its source path does not exist or is
+	// not accessible.
+	//
+	// BindPaths= creates regular writable bind mounts (unless the source file system mount is already
+	// marked read-only), while BindReadOnlyPaths= creates read-only bind mounts. These settings may be
+	// used more than once, each usage appends to the unit's list of bind mounts. If the empty string is
+	// assigned to either of these two options the entire list of bind mounts defined prior to this is
+	// reset. Note that, in this case, both read-only and regular bind mounts are reset, regardless which
+	// of the two settings is used.
+	//
+	// Using this option implies that a mount namespace is allocated for the unit, i.e. it implies the
+	// effect of PrivateMounts= (see below).
+	//
+	// This option is particularly useful when RootDirectory=/RootImage= is used. In this case, the source
+	// path refers to a path on the host file system, while the destination path refers to a path below the
+	// root directory of the unit.
+	//
+	// Note that the destination directory must exist or systemd must be able to create it. Thus, it is not
+	// possible to use those options for mount points nested underneath paths specified in
+	// InaccessiblePaths=, or under /home/ and other protected directories if ProtectHome=yes is specified.
+	// TemporaryFileSystem= with :ro or ProtectHome=tmpfs should be used instead.
+	//
+	BindPaths []string `hcl:"bind_paths,optional" systemd:"BindPaths"`
+	// Configures unit-specific bind mounts. A bind mount makes a particular file or directory available at
+	// an additional place in the unit's view of the file system. Any bind mounts created with this option
+	// are specific to the unit, and are not visible in the host's mount table. This option expects a
+	// whitespace separated list of bind mount definitions. Each definition consists of a colon-separated
+	// triple of source path, destination path and option string, where the latter two are optional. If
+	// only a source path is specified the source and destination is taken to be the same. The option
+	// string may be either rbind or norbind for configuring a recursive or non-recursive bind mount. If
+	// the destination path is omitted, the option string must be omitted too. Each bind mount definition
+	// may be prefixed with -, in which case it will be ignored when its source path does not exist or is
+	// not accessible.
+	//
+	// BindPaths= creates regular writable bind mounts (unless the source file system mount is already
+	// marked read-only), while BindReadOnlyPaths= creates read-only bind mounts. These settings may be
+	// used more than once, each usage appends to the unit's list of bind mounts. If the empty string is
+	// assigned to either of these two options the entire list of bind mounts defined prior to this is
+	// reset. Note that, in this case, both read-only and regular bind mounts are reset, regardless which
+	// of the two settings is used.
+	//
+	// Using this option implies that a mount namespace is allocated for the unit, i.e. it implies the
+	// effect of PrivateMounts= (see below).
+	//
+	// This option is particularly useful when RootDirectory=/RootImage= is used. In this case, the source
+	// path refers to a path on the host file system, while the destination path refers to a path below the
+	// root directory of the unit.
+	//
+	// Note that the destination directory must exist or systemd must be able to create it. Thus, it is not
+	// possible to use those options for mount points nested underneath paths specified in
+	// InaccessiblePaths=, or under /home/ and other protected directories if ProtectHome=yes is specified.
+	// TemporaryFileSystem= with :ro or ProtectHome=tmpfs should be used instead.
+	//
+	BindReadOnlyPaths []string `hcl:"bind_read_only_paths,optional" systemd:"BindReadOnlyPaths"`
+	// Takes a D-Bus destination name that this service shall use. This option is mandatory for services
+	// where Type= is set to dbus. It is recommended to always set this property if known to make it easy
+	// to map the service name to the D-Bus destination. In particular, systemctl
+	// service-log-level/service-log-target verbs make use of this.
+	BusName string `hcl:"bus_name,optional" systemd:"BusName"`
+	// Controls the CPU affinity of the executed processes. Takes a list of CPU indices or ranges separated
+	// by either whitespace or commas. Alternatively, takes a special "numa" value in which case systemd
+	// automatically derives allowed CPU range based on the value of NUMAMask= option. CPU ranges are
+	// specified by the lower and upper CPU indices separated by a dash. This option may be specified more
+	// than once, in which case the specified CPU affinity masks are merged. If the empty string is
+	// assigned, the mask is reset, all assignments prior to this will have no effect. See <citerefentry
+	// project='man-pages'><refentrytitle>sched_setaffinity</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// for details.
+	CPUAffinity             string `hcl:"cpu_affinity,optional" systemd:"CPUAffinity"`
+	CPUPressureThresholdSec int    `hcl:"cpu_pressure_threshold_sec,optional" systemd:"CPUPressureThresholdSec"`
+	CPUPressureWatch        string `hcl:"cpu_pressure_watch,optional" systemd:"CPUPressureWatch"`
+	CPUQuota                string `hcl:"cpu_quota,optional" systemd:"CPUQuota"`
+	CPUQuotaPeriodSec       int    `hcl:"cpu_quota_period_sec,optional" systemd:"CPUQuotaPeriodSec"`
+	// Sets the CPU scheduling policy for executed processes. Takes one of other, batch, idle, fifo, rr or
+	// ext. See <citerefentry
+	// project='man-pages'><refentrytitle>sched_setscheduler</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// for details.
+	CPUSchedulingPolicy string `hcl:"cpu_scheduling_policy,optional" systemd:"CPUSchedulingPolicy"`
+	// Sets the CPU scheduling priority for executed processes. The available priority range depends on the
+	// selected CPU scheduling policy (see above). For real-time scheduling policies an integer between 1
+	// (lowest priority) and 99 (highest priority) can be used. In case of CPU resource contention, smaller
+	// values mean less CPU time is made available to the service, larger values mean more. See
+	// <citerefentry
+	// project='man-pages'><refentrytitle>sched_setscheduler</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// for details.
+	CPUSchedulingPriority string `hcl:"cpu_scheduling_priority,optional" systemd:"CPUSchedulingPriority"`
+	// Takes a boolean argument. If true, elevated CPU scheduling priorities and policies will be reset
+	// when the executed processes call <citerefentry
+	// project='man-pages'><refentrytitle>fork</refentrytitle><manvolnum>2</manvolnum></citerefentry>, and
+	// can hence not leak into child processes. See <citerefentry
+	// project='man-pages'><refentrytitle>sched_setscheduler</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// for details. Defaults to false.
+	CPUSchedulingResetOnFork bool   `hcl:"cpu_scheduling_reset_on_fork,optional" systemd:"CPUSchedulingResetOnFork"`
+	CPUWeight                uint64 `hcl:"cpu_weight,optional" systemd:"CPUWeight"`
+	// /var/cache/
+	CacheDirectory []string `hcl:"cache_directory,optional" systemd:"CacheDirectory"`
+	// Takes a boolean argument. If true, a project ID is assigned to the directories specified in
+	// StateDirectory=, CacheDirectory=, or LogsDirectory= respectively, which is used for tracking disk
+	// usage when disk quotas are turned on (see <ulink
+	// url="https://man7.org/linux/man-pages/man8/repquota.8.html">repquota</ulink>). Defaults to false.
+	//
+	// To set and enforce disk quotas, StateDirectoryQuota=, CacheDirectoryQuota=, or LogsDirectoryQuota=
+	// must be specified.
+	//
+	CacheDirectoryAccounting bool `hcl:"cache_directory_accounting,optional" systemd:"CacheDirectoryAccounting"`
+	// Specifies the access mode of the directories specified in RuntimeDirectory=, StateDirectory=,
+	// CacheDirectory=, LogsDirectory=, or ConfigurationDirectory=, respectively, as an octal number.
+	// Defaults to 0755. See "Permissions" in <citerefentry
+	// project='man-pages'><refentrytitle>path_resolution</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// for a discussion of the meaning of permission bits.
+	CacheDirectoryMode os.FileMode `unitd:"cache_directory_mode,optional" systemd:"CacheDirectoryMode"`
+	// Specifies the storage limits for the directories specified in StateDirectory=, CacheDirectory=, or
+	// LogsDirectory= respectively.
+	//
+	// The storage quota is defined in terms of disk blocks and inodes, as per <ulink
+	// url="https://man7.org/linux/man-pages/man2/quotactl.2.html">quotactl</ulink>. Takes an absolute size
+	// limit in bytes. If the value is suffixed with K, M, G or T, the specified size is parsed as
+	// Kilobytes, Megabytes, Gigabytes, or Terabytes (with the base 1024), respectively. If an absolute
+	// size limit is specified, only the block quota is set (rounded up to the nearest block).
+	// Alternatively, a percentage value may be specified, which applies the same percent quota to both
+	// blocks and inodes. Defaults to off, in which case no storage limits will be set.
+	//
+	// Only hard limits are set, not soft limits. If the underlying filesystem for the specified
+	// directories does not support project quotas, the specified storage limits will not be set. In
+	// addition to enabling per-unit quotas with these settings, it is necessary to enable prjquota on the
+	// file system level as well (i.e. tune2fs -Q prjquota). Quotas must also be turned on with <ulink
+	// url="https://linux.die.net/man/8/quotaon">quotaon.</ulink>
+	//
+	CacheDirectoryQuota string `hcl:"cache_directory_quota,optional" systemd:"CacheDirectoryQuota"`
+	// Controls which capabilities to include in the capability bounding set for the executed process. See
+	// <citerefentry
+	// project='man-pages'><refentrytitle>capabilities</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// for details. Takes a whitespace-separated list of capability names, e.g. CAP_SYS_ADMIN,
+	// CAP_DAC_OVERRIDE, CAP_SYS_PTRACE. Capabilities listed will be included in the bounding set, all
+	// others are removed. If the list of capabilities is prefixed with ~, all but the listed capabilities
+	// will be included, the effect of the assignment inverted. Note that this option also affects the
+	// respective capabilities in the effective, permitted and inheritable capability sets. If this option
+	// is not used, the capability bounding set is not modified on process execution, hence no limits on
+	// the capabilities of the process are enforced. This option may appear more than once, in which case
+	// the bounding sets are merged by OR, or by AND if the lines are prefixed with ~ (see below). If the
+	// empty string is assigned to this option, the bounding set is reset to the empty capability set, and
+	// all prior settings have no effect. If set to ~ (without any further argument), the bounding set is
+	// reset to the full set of available capabilities, also undoing any previous settings. This does not
+	// affect commands prefixed with +.
+	//
+	// Use
+	// <citerefentry><refentrytitle>systemd-analyze</refentrytitle><manvolnum>1</manvolnum></citerefentry>'s
+	// capability command to retrieve a list of capabilities defined on the local system.
+	//
+	// Example: if a unit has the following, <programlisting>CapabilityBoundingSet=CAP_A CAP_B
+	// CapabilityBoundingSet=CAP_B CAP_C</programlisting> then <constant index='false'>CAP_A, <constant
+	// index='false'>CAP_B, and <constant index='false'>CAP_C are set. If the second line is prefixed with
+	// ~, e.g., <programlisting>CapabilityBoundingSet=CAP_A CAP_B CapabilityBoundingSet=~CAP_B
+	// CAP_C</programlisting> then, only <constant index='false'>CAP_A is set.
+	//
+	CapabilityBoundingSet []string `hcl:"capability_bounding_set,optional" systemd:"CapabilityBoundingSet"`
+	// /etc/
+	ConfigurationDirectory []string `hcl:"configuration_directory,optional" systemd:"ConfigurationDirectory"`
+	// Specifies the access mode of the directories specified in RuntimeDirectory=, StateDirectory=,
+	// CacheDirectory=, LogsDirectory=, or ConfigurationDirectory=, respectively, as an octal number.
+	// Defaults to 0755. See "Permissions" in <citerefentry
+	// project='man-pages'><refentrytitle>path_resolution</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// for a discussion of the meaning of permission bits.
+	ConfigurationDirectoryMode os.FileMode `unitd:"configuration_directory_mode,optional" systemd:"ConfigurationDirectoryMode"`
+	// Controls which types of memory mappings will be saved if the process dumps core (using the
+	// /proc/pid/coredump_filter file). Takes a whitespace-separated combination of mapping type names or
+	// numbers (with the default base 16). Mapping type names are private-anonymous, shared-anonymous,
+	// private-file-backed, shared-file-backed, elf-headers, private-huge, shared-huge, private-dax,
+	// shared-dax, and the special values all (all types) and default (the kernel default of
+	// private-anonymous shared-anonymous elf-headers private-huge). See <citerefentry
+	// project='man-pages'><refentrytitle>core</refentrytitle><manvolnum>5</manvolnum></citerefentry> for
+	// the meaning of the mapping types. When specified multiple times, all specified masks are ORed. When
+	// not set, or if the empty value is assigned, the inherited value is not changed.
+	CoredumpFilter  string `hcl:"coredump_filter,optional" systemd:"CoredumpFilter"`
+	CoredumpReceive bool   `hcl:"coredump_receive,optional" systemd:"CoredumpReceive"`
+	Delegate        string `hcl:"delegate,optional" systemd:"Delegate"`
+	// Delegates ownership of the given namespace types to the user namespace of the processes of this
+	// unit. For details about Linux namespaces, see <citerefentry
+	// project='man-pages'><refentrytitle>namespaces</refentrytitle><manvolnum>7</manvolnum></citerefentry>.
+	// Either takes a boolean argument, or a space-separated list of namespace type identifiers. If false
+	// (the default), the unit's processes' user namespace will not have ownership over any namespaces
+	// created during setup of the unit's sandboxed environment. If true, ownership of all namespace types
+	// (except for user namespaces, where the concept doesn't apply) created during setup of the unit's
+	// sandboxed environment is delegated to the unit's processes' user namespace. Otherwise, a
+	// space-separated list of namespace type identifiers must be specified, consisting of any combination
+	// of: cgroup, ipc, net, mnt, pid, and uts. All namespaces of the listed types will be owned by the
+	// unit's processes' user namespace if they are created during setup of the unit's sandboxed
+	// environment (allow-listing). By prepending the list with a single tilde character (~) the effect may
+	// be inverted: all namespaces of types not listed and created during setup of the unit's sandboxed
+	// environment will be owned by the unit's processes' user namespace (deny-listing). If the empty
+	// string is assigned, the default namespace ownership is applied, which is equivalent to false. This
+	// option may appear more than once, in which case the namespace types are merged by OR, or by AND if
+	// the lines are prefixed with ~ (see examples below). Internally, this setting controls the order in
+	// which namespaces are unshared by systemd. Namespace types that should be owned by the unit's
+	// processes' user namespace will be unshared after unsharing the user namespace. Internally, this
+	// setting controls the order in which namespaces are unshared. Delegated namespaces will be unshared
+	// after the user namespace is unshared. Other namespaces will be unshared before the user namespace is
+	// unshared.
+	//
+	// Delegating any namespace with DelegateNamespaces= implies PrivateUsers=self unless PrivateUsers= is
+	// explicitly enabled already by the unit. Delegating a namespace does not imply that the namespace is
+	// unshared, that is done with the namespace specific unit setting such as PrivateNetwork= or
+	// PrivateMounts=.
+	//
+	// Note that some namespace sandboxing options might entail mount namespace for private API VFS
+	// instances, such as PrivatePIDs=, ProtectControlGroups=private/strict, or PrivateNetwork=. If any of
+	// the mentioned options are enabled, mount namespace is implicitly delegated.
+	//
+	DelegateNamespaces []string `hcl:"delegate_namespaces,optional" systemd:"DelegateNamespaces"`
+	DelegateSubgroup   string   `hcl:"delegate_subgroup,optional" systemd:"DelegateSubgroup"`
+	DeviceAllow        []string `hcl:"device_allow,optional" systemd:"DeviceAllow"`
+	DevicePolicy       string   `hcl:"device_policy,optional" systemd:"DevicePolicy"`
+	DisableControllers []string `hcl:"disable_controllers,optional" systemd:"DisableControllers"`
+	// Takes a boolean parameter. If set, a UNIX user and group pair is allocated dynamically when the unit
+	// is started, and released as soon as it is stopped. The user and group will not be added to
+	// /etc/passwd or /etc/group, but are managed transiently during runtime. The
+	// <citerefentry><refentrytitle>nss-systemd</refentrytitle><manvolnum>8</manvolnum></citerefentry>
+	// glibc NSS module provides integration of these dynamic users/groups into the system's user and group
+	// databases. The user and group name to use may be configured via User= and Group= (see above). If
+	// these options are not used and dynamic user/group allocation is enabled for a unit, the name of the
+	// dynamic user/group is implicitly derived from the unit name. If the unit name without the type
+	// suffix qualifies as valid user name it is used directly, otherwise a name incorporating a hash of it
+	// is used. If a statically allocated user or group of the configured name already exists, it is used
+	// and no dynamic user/group is allocated. Note that if User= is specified and the static group with
+	// the name exists, then it is required that the static user with the name already exists. Similarly,
+	// if Group= is specified and the static user with the name exists, then it is required that the static
+	// group with the name already exists. Dynamic users/groups are allocated from the UID/GID range
+	// 61184…65519. It is recommended to avoid this range for regular system or login users. At any point
+	// in time each UID/GID from this range is only assigned to zero or one dynamically allocated
+	// users/groups in use. However, UID/GIDs are recycled after a unit is terminated. Care should be taken
+	// that any processes running as part of a unit for which dynamic users/groups are enabled do not leave
+	// files or directories owned by these users/groups around, as a different unit might get the same
+	// UID/GID assigned later on, and thus gain access to these files or directories. If DynamicUser= is
+	// enabled, RemoveIPC= is implied (and cannot be turned off). This ensures that the lifetime of IPC
+	// objects and temporary files created by the executed processes is bound to the runtime of the
+	// service, and hence the lifetime of the dynamic user/group. Since /tmp/ and /var/tmp/ are usually the
+	// only world-writable directories on a system, unless PrivateTmp= is manually set to true,
+	// disconnected would be implied. This ensures that a unit making use of dynamic user/group allocation
+	// cannot leave files around after unit termination. Furthermore NoNewPrivileges= and RestrictSUIDSGID=
+	// are implicitly enabled (and cannot be disabled), to ensure that processes invoked cannot take
+	// benefit or create SUID/SGID files or directories. Moreover, ProtectSystem=strict and
+	// ProtectHome=read-only are implied, thus prohibiting the service to write to arbitrary file system
+	// locations. In order to allow the service to write to certain directories, they have to be
+	// allow-listed using ReadWritePaths=, but care must be taken so that UID/GID recycling does not create
+	// security issues involving files created by the service. Use RuntimeDirectory= (see below) in order
+	// to assign a writable runtime directory to a service, owned by the dynamic user/group and removed
+	// automatically when the unit is terminated. Use StateDirectory=, CacheDirectory= and LogsDirectory=
+	// in order to assign a set of writable directories for specific purposes to the service in a way that
+	// they are protected from vulnerabilities due to UID reuse (see below). If this option is enabled,
+	// care should be taken that the unit's processes do not get access to directories outside of these
+	// explicitly configured and managed ones. Specifically, do not use BindPaths= and be careful with
+	// AF_UNIX file descriptor passing for directory file descriptors, as this would permit processes to
+	// create files or directories owned by the dynamic user/group that are not subject to the lifecycle
+	// and access guarantees of the service. Note that this option is currently incompatible with D-Bus
+	// policies, thus a service using this option may currently not allocate a D-Bus service name (note
+	// that this does not affect calling into other D-Bus services). Defaults to off.
+	DynamicUser bool `hcl:"dynamic_user,optional" systemd:"DynamicUser"`
+	// Sets environment variables for executed processes. Each line is unquoted using the rules described
+	// in "Quoting" section in
+	// <citerefentry><refentrytitle>systemd.syntax</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// and becomes a list of variable assignments. If you need to assign a value containing spaces or the
+	// equals sign to a variable, put quotes around the whole assignment. Variable expansion is not
+	// performed inside the strings and the $ character has no special meaning. Specifier expansion is
+	// performed, see the "Specifiers" section in
+	// <citerefentry><refentrytitle>systemd.unit</refentrytitle><manvolnum>5</manvolnum></citerefentry>.
+	//
+	// This option may be specified more than once, in which case all listed variables will be set. If the
+	// same variable is listed twice, the later setting will override the earlier setting. If the empty
+	// string is assigned to this option, the list of environment variables is reset, all prior assignments
+	// have no effect.
+	//
+	// The names of the variables can contain ASCII letters, digits, and the underscore character. Variable
+	// names cannot be empty or start with a digit. In variable values, most characters are allowed, but
+	// non-printable characters are currently rejected.
+	//
+	// Example: <programlisting>Environment="VAR1=word1 word2" VAR2=word3 "VAR3=$word 5 6"</programlisting>
+	// gives three variables VAR1, VAR2, VAR3 with the values word1 word2, word3, $word 5 6.
+	//
+	// See <citerefentry
+	// project='man-pages'><refentrytitle>environ</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// for details about environment variables.
+	//
+	// Note that environment variables are not suitable for passing secrets (such as passwords, key
+	// material, …) to service processes. Environment variables set for a unit are exposed to
+	// unprivileged clients via D-Bus IPC, and generally not understood as being data that requires
+	// protection. Moreover, environment variables are propagated down the process tree, including across
+	// security boundaries (such as setuid/setgid executables), and hence might leak to processes that
+	// should not have access to the secret data. Use LoadCredential=, LoadCredentialEncrypted= or
+	// SetCredentialEncrypted= (see below) to pass data to unit processes securely.
+	//
+	Environment []string `hcl:"environment,optional" systemd:"Environment"`
+	// Similar to Environment=, but reads the environment variables from a text file. The text file should
+	// contain newline-separated variable assignments. Empty lines, lines without an = separator, or lines
+	// starting with ; or # will be ignored, which may be used for commenting. The file must be encoded
+	// with UTF-8. Valid characters are <ulink
+	// url="https://www.unicode.org/glossary/#unicode_scalar_value">unicode scalar values</ulink> other
+	// than <ulink url="https://www.unicode.org/glossary/#noncharacter">unicode noncharacters</ulink>,
+	// U+0000 NUL, and U+FEFF <ulink url="https://www.unicode.org/glossary/#byte_order_mark">unicode byte
+	// order mark</ulink>. Control codes other than NUL are allowed.
+	//
+	// In the file, an unquoted value after the = is parsed with the same backslash-escape rules as <ulink
+	// url="https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_02_01">POSIX
+	// shell unquoted text</ulink>, but unlike in a shell, interior whitespace is preserved and quotes
+	// after the first non-whitespace character are preserved. Leading and trailing whitespace (space, tab,
+	// carriage return) is discarded, but interior whitespace within the line is preserved verbatim. A line
+	// ending with a backslash will be continued to the following one, with the newline itself discarded. A
+	// backslash \ followed by any character other than newline will preserve the following character, so
+	// that \\ will become the value \.
+	//
+	// In the file, a '-quoted value after the = can span multiple lines and contain any character verbatim
+	// other than single quote, like <ulink
+	// url="https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_02_02">POSIX
+	// shell single-quoted text</ulink>. No backslash-escape sequences are recognized. Leading and trailing
+	// whitespace outside of the single quotes is discarded.
+	//
+	// In the file, a "-quoted value after the = can span multiple lines, and the same escape sequences are
+	// recognized as in <ulink
+	// url="https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_02_03">POSIX
+	// shell double-quoted text</ulink>. Backslash (\) followed by any of "\`$ will preserve that
+	// character. A backslash followed by newline is a line continuation, and the newline itself is
+	// discarded. A backslash followed by any other character is ignored; both the backslash and the
+	// following character are preserved verbatim. Leading and trailing whitespace outside of the double
+	// quotes is discarded.
+	//
+	// The argument passed should be an absolute filename or wildcard expression. If the file does not
+	// exist, cannot be read, or contains invalid content, the service will fail to start. To make the file
+	// optional, prefix the path with -, which causes all errors related to the file to be silently
+	// ignored. This option may be specified more than once in which case all specified files are read. If
+	// the empty string is assigned to this option, the list of files to read is reset, all prior
+	// assignments have no effect.
+	//
+	// The files listed with this directive will be read shortly before the process is executed (more
+	// specifically, after all processes from a previous unit state terminated. This means you can generate
+	// these files in one unit state, and read it with this option in the next. The files are read from the
+	// file system of the service manager, before any file system changes like bind mounts take place).
+	//
+	// Settings from these files override settings made with Environment=. If the same variable is set
+	// twice from these files, the files will be read in the order they are specified and the later setting
+	// will override the earlier setting.
+	//
+	EnvironmentFile string `hcl:"environment_file,optional" systemd:"EnvironmentFile"`
 	// Optional commands that are executed before the commands in ExecStartPre=. Syntax is the same as for
 	// ExecStart=. Multiple command lines are allowed, regardless of the service type (i.e. Type=), and the
 	// commands are executed one after the other, serially.
@@ -33,7 +446,67 @@ type ServiceBlock struct {
 	// ExecCondition=. ExecCondition= will also run the commands in ExecStopPost=, as part of stopping the
 	// service, in the case of any non-zero or abnormal exits, like the ones described above.
 	//
-	ExecCondition [][]string `hcl:"exec_condition,optional" systemd:"ExecCondition"`
+	ExecCondition string `hcl:"exec_condition,optional" systemd:"ExecCondition"`
+	// Sets up a new file system namespace for executed processes. These options may be used to limit
+	// access a process has to the file system. Each setting takes a space-separated list of paths relative
+	// to the host's root directory (i.e. the system running the service manager). Note that if paths
+	// contain symlinks, they are resolved relative to the root directory set with
+	// RootDirectory=/RootImage=.
+	//
+	// Paths listed in ReadWritePaths= are accessible from within the namespace with the same access modes
+	// as from outside of it. Paths listed in ReadOnlyPaths= are accessible for reading only, writing will
+	// be refused even if the usual file access controls would permit this. Nest ReadWritePaths= inside of
+	// ReadOnlyPaths= in order to provide writable subdirectories within read-only directories. Use
+	// ReadWritePaths= in order to allow-list specific paths for write access if ProtectSystem=strict is
+	// used. Note that ReadWritePaths= cannot be used to gain write access to a file system whose
+	// superblock is mounted read-only. On Linux, for each mount point write access is granted only if the
+	// mount point itself and the file system superblock backing it are not marked read-only.
+	// ReadWritePaths= only controls the former, not the latter, hence a read-only file system superblock
+	// remains protected.
+	//
+	// Paths listed in InaccessiblePaths= will be made inaccessible for processes inside the namespace
+	// along with everything below them in the file system hierarchy. This may be more restrictive than
+	// desired, because it is not possible to nest ReadWritePaths=, ReadOnlyPaths=, BindPaths=, or
+	// BindReadOnlyPaths= inside it. For a more flexible option, see TemporaryFileSystem=.
+	//
+	// Content in paths listed in NoExecPaths= are not executable even if the usual file access controls
+	// would permit this. Nest ExecPaths= inside of NoExecPaths= in order to provide executable content
+	// within non-executable directories.
+	//
+	// Non-directory paths may be specified as well. These options may be specified more than once, in
+	// which case all paths listed will have limited access from within the namespace. If the empty string
+	// is assigned to this option, the specific list is reset, and all prior assignments have no effect.
+	//
+	// Paths in ReadWritePaths=, ReadOnlyPaths=, InaccessiblePaths=, ExecPaths= and NoExecPaths= may be
+	// prefixed with -, in which case they will be ignored when they do not exist. If prefixed with + the
+	// paths are taken relative to the root directory of the unit, as configured with
+	// RootDirectory=/RootImage=, instead of relative to the root directory of the host (see above). When
+	// combining - and + on the same path make sure to specify - first, and + second.
+	//
+	// Note that these settings will disconnect propagation of mounts from the unit's processes to the
+	// host. This means that this setting may not be used for services which shall be able to install mount
+	// points in the main mount namespace. For ReadWritePaths= and ReadOnlyPaths=, propagation in the other
+	// direction is not affected, i.e. mounts created on the host generally appear in the unit processes'
+	// namespace, and mounts removed on the host also disappear there too. In particular, note that mount
+	// propagation from host to unit will result in unmodified mounts to be created in the unit's
+	// namespace, i.e. writable mounts appearing on the host will be writable in the unit's namespace too,
+	// even when propagated below a path marked with ReadOnlyPaths=! Restricting access with these options
+	// hence does not extend to submounts of a directory that are created later on. This means the
+	// lock-down offered by that setting is not complete, and does not offer full protection.
+	//
+	// Note that the effect of these settings may be undone by privileged processes. In order to set up an
+	// effective sandboxed environment for a unit it is thus recommended to combine these settings with
+	// either CapabilityBoundingSet=~CAP_SYS_ADMIN or SystemCallFilter=~@mount.
+	//
+	// Please be extra careful when applying these options to API file systems (a list of them could be
+	// found in MountAPIVPS=), since they may be required for basic system functionalities. Moreover, /run/
+	// needs to be writable for setting up mount namespace and propagation.
+	//
+	// Simple allow-list example using these directives: <programlisting>[Service] ReadOnlyPaths=/
+	// ReadWritePaths=/var /run InaccessiblePaths=-/lost+found NoExecPaths=/ ExecPaths=/usr/sbin/my_daemon
+	// /usr/lib /usr/lib64 </programlisting>
+	//
+	ExecPaths []string `hcl:"exec_paths,optional" systemd:"ExecPaths"`
 	// Commands to execute to trigger a configuration reload in the service. This setting may take multiple
 	// command lines, following the same scheme as described for ExecStart= above. Use of this setting is
 	// optional. Specifier and environment variable substitution is supported here following the same
@@ -56,10 +529,16 @@ type ServiceBlock struct {
 	// is received before ExecReload= completes, the signaling is skipped and the service manager
 	// immediately starts listening for READY=1.
 	//
-	ExecReload [][]string `hcl:"exec_reload,optional" systemd:"ExecReload"`
+	ExecReload string `hcl:"exec_reload,optional" systemd:"ExecReload"`
 	// Commands to execute after a successful reload operation. Syntax for this setting is exactly the same
 	// as ExecReload=.
-	ExecReloadPost [][]string `hcl:"exec_reload_post,optional" systemd:"ExecReloadPost"`
+	ExecReloadPost string `hcl:"exec_reload_post,optional" systemd:"ExecReloadPost"`
+	// Takes a colon separated list of absolute paths relative to which the executable used by the Exec*=
+	// (e.g. ExecStart=, ExecStop=, etc.) properties can be found. ExecSearchPath= overrides $PATH if $PATH
+	// is not supplied by the user through Environment=, EnvironmentFile= or PassEnvironment=. Assigning an
+	// empty string removes previous assignments and setting ExecSearchPath= to a value multiple times will
+	// append to the previous setting.
+	ExecSearchPath []string `hcl:"exec_search_path,optional" systemd:"ExecSearchPath"`
 	// Commands that are executed when this service is started.
 	//
 	// Unless Type= is oneshot, exactly one command must be given. When Type=oneshot is used, this setting
@@ -75,7 +554,7 @@ type ServiceBlock struct {
 	// Unless Type=forking is set, the process started via this command line will be considered the main
 	// process of the daemon.
 	//
-	ExecStart [][]string `hcl:"exec_start,optional" systemd:"ExecStart"`
+	ExecStart string `hcl:"exec_start,optional" systemd:"ExecStart"`
 	// Additional commands that are executed before or after the command in ExecStart=, respectively.
 	// Syntax is the same as for ExecStart=. Multiple command lines are allowed, regardless of the service
 	// type (i.e. Type=), and the commands are executed one after the other, serially.
@@ -102,7 +581,7 @@ type ServiceBlock struct {
 	// Note that the execution of ExecStartPost= is taken into account for the purpose of Before=/After=
 	// ordering constraints.
 	//
-	ExecStartPost [][]string `hcl:"exec_start_post,optional" systemd:"ExecStartPost"`
+	ExecStartPost string `hcl:"exec_start_post,optional" systemd:"ExecStartPost"`
 	// Additional commands that are executed before or after the command in ExecStart=, respectively.
 	// Syntax is the same as for ExecStart=. Multiple command lines are allowed, regardless of the service
 	// type (i.e. Type=), and the commands are executed one after the other, serially.
@@ -129,7 +608,7 @@ type ServiceBlock struct {
 	// Note that the execution of ExecStartPost= is taken into account for the purpose of Before=/After=
 	// ordering constraints.
 	//
-	ExecStartPre [][]string `hcl:"exec_start_pre,optional" systemd:"ExecStartPre"`
+	ExecStartPre string `hcl:"exec_start_pre,optional" systemd:"ExecStartPre"`
 	// Commands to execute to stop the service started via ExecStart=. This argument takes multiple command
 	// lines, following the same scheme as described for ExecStart= above. Use of this setting is optional.
 	// After the commands configured in this option are run, it is implied that the service is stopped, and
@@ -162,7 +641,7 @@ type ServiceBlock struct {
 	// It is recommended to use this setting for commands that communicate with the service requesting
 	// clean termination. For post-mortem clean-up steps use ExecStopPost= instead.
 	//
-	ExecStop [][]string `hcl:"exec_stop,optional" systemd:"ExecStop"`
+	ExecStop string `hcl:"exec_stop,optional" systemd:"ExecStop"`
 	// Additional commands that are executed after the service is stopped. This includes cases where the
 	// commands configured in ExecStop= were used, where the service does not have any ExecStop= defined,
 	// or where the service exited unexpectedly. This argument takes multiple command lines, following the
@@ -186,7 +665,7 @@ type ServiceBlock struct {
 	// Note that the execution of ExecStopPost= is taken into account for the purpose of Before=/After=
 	// ordering constraints.
 	//
-	ExecStopPost [][]string `hcl:"exec_stop_post,optional" systemd:"ExecStopPost"`
+	ExecStopPost string `hcl:"exec_stop_post,optional" systemd:"ExecStopPost"`
 	// Specifies when the manager should consider the service to be finished. One of main or cgroup:
 	//
 	// It is generally recommended to use ExitType=main when a service has a known forking model and a main
@@ -195,8 +674,102 @@ type ServiceBlock struct {
 	// transient or automatically generated services, such as graphical applications inside of a desktop
 	// environment.
 	//
-	ExitType      int    `hcl:"exit_type,optional" systemd:"ExitType"`
-	FailureAction string `hcl:"failure_action,optional" systemd:"FailureAction"`
+	ExitType int `hcl:"exit_type,optional" systemd:"ExitType"`
+	// This setting is similar to BindReadOnlyPaths= in that it mounts a file system hierarchy from a
+	// directory, but instead of providing a destination path, an overlay will be set up. This option
+	// expects a whitespace separated list of source directories.
+	//
+	// A read-only OverlayFS will be set up on top of /usr/ and /opt/ hierarchies for sysext images and
+	// /etc/ hierarchy for confext images. The order in which the directories are listed will determine the
+	// order in which the overlay is laid down: directories specified first to last will result in
+	// overlayfs layers bottom to top.
+	//
+	// Each directory listed in ExtensionDirectories= may be prefixed with -, in which case it will be
+	// ignored when its source path does not exist. Any mounts created with this option are specific to the
+	// unit, and are not visible in the host's mount table.
+	//
+	// These settings may be used more than once, each usage appends to the unit's list of directories
+	// paths. If the empty string is assigned, the entire list of mount paths defined prior to this is
+	// reset.
+	//
+	// Each sysext directory must contain a /usr/lib/extension-release.d/extension-release.IMAGE file while
+	// each confext directory must carry a /etc/extension-release.d/extension-release.IMAGE file, with the
+	// appropriate metadata which matches RootImage=/RootDirectory= or the host. See:
+	// <citerefentry><refentrytitle>os-release</refentrytitle><manvolnum>5</manvolnum></citerefentry>.
+	//
+	// If a service employs this option with
+	// <citerefentry><refentrytitle>systemd.v</refentrytitle><manvolnum>7</manvolnum></citerefentry>, and
+	// has RefreshOnReload=extensions enabled (the default), the confexts will be refreshed to pick up any
+	// changes on service reload. This only applies to confext extensions. Note that in case a service has
+	// this configuration enabled at first, and then it is subsequently removed in an update followed by a
+	// daemon-reload operation, reloading the confexts will be a no-op, and a full service restart is
+	// required instead. See
+	// <citerefentry><refentrytitle>systemd.service</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// also for details.
+	//
+	// Note that usage from user units requires overlayfs support in unprivileged user namespaces, which
+	// was first introduced in kernel v5.11.
+	//
+	ExtensionDirectories []string `hcl:"extension_directories,optional" systemd:"ExtensionDirectories"`
+	// Takes an image policy string as per
+	// <citerefentry><refentrytitle>systemd.image-policy</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// to use when mounting the disk images (DDI) specified in RootImage=, MountImage=, ExtensionImage=,
+	// respectively. If not specified the following policy string is the default for RootImagePolicy= and
+	// MountImagePolicy:
+	//
+	// The default policy for ExtensionImagePolicy= is:
+	//
+	ExtensionImagePolicy string `hcl:"extension_image_policy,optional" systemd:"ExtensionImagePolicy"`
+	// This setting is similar to MountImages= in that it mounts a file system hierarchy from a block
+	// device node or loopback file, but instead of providing a destination path, an overlay will be set
+	// up. This option expects a whitespace separated list of mount definitions. Each definition consists
+	// of a source path, optionally followed by a colon and a list of mount options.
+	//
+	// A read-only OverlayFS will be set up on top of /usr/ and /opt/ hierarchies for sysext images and
+	// /etc/ hierarchy for confext images. The order in which the images are listed will determine the
+	// order in which the overlay is laid down: images specified first to last will result in overlayfs
+	// layers bottom to top.
+	//
+	// Mount options may be defined as a single comma-separated list of options, in which case they will be
+	// implicitly applied to the root partition on the image, or a series of colon-separated tuples of
+	// partition name and mount options. Valid partition names and mount options are the same as for
+	// RootImageOptions= setting described above.
+	//
+	// Each mount definition may be prefixed with -, in which case it will be ignored when its source path
+	// does not exist. The source argument is a path to a block device node or regular file. If the source
+	// path contains a :, it needs to be escaped as \:. The device node or file system image file needs to
+	// follow the same rules as specified for RootImage=. Any mounts created with this option are specific
+	// to the unit, and are not visible in the host's mount table.
+	//
+	// These settings may be used more than once, each usage appends to the unit's list of image paths. If
+	// the empty string is assigned, the entire list of mount paths defined prior to this is reset.
+	//
+	// Each sysext image must carry a /usr/lib/extension-release.d/extension-release.IMAGE file while each
+	// confext image must carry a /etc/extension-release.d/extension-release.IMAGE file, with the
+	// appropriate metadata which matches RootImage=/RootDirectory= or the host. See:
+	// <citerefentry><refentrytitle>os-release</refentrytitle><manvolnum>5</manvolnum></citerefentry>. To
+	// disable the safety check that the extension-release file name matches the image file name, the
+	// x-systemd.relax-extension-release-check mount option may be appended.
+	//
+	// If a service employs this option with
+	// <citerefentry><refentrytitle>systemd.v</refentrytitle><manvolnum>7</manvolnum></citerefentry>, and
+	// has RefreshOnReload=extensions enabled (the default), the confexts will be refreshed to pick up any
+	// changes on service reload. This only applies to confext extensions. Note that in case a service has
+	// this configuration enabled at first, and then it is subsequently removed in an update followed by a
+	// daemon-reload operation, reloading the confexts will be a no-op, and a full service restart is
+	// required instead. See
+	// <citerefentry><refentrytitle>systemd.service</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// also for details.
+	//
+	// When DevicePolicy= is set to closed or strict, or set to auto and DeviceAllow= is set, then this
+	// setting adds /dev/loop-control with rw mode, block-loop and block-blkext with rwm mode to
+	// DeviceAllow=. See
+	// <citerefentry><refentrytitle>systemd.resource-control</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// for the details about DevicePolicy= or DeviceAllow=. Also, see PrivateDevices= below, as it may
+	// change the setting of DevicePolicy=.
+	//
+	ExtensionImages []string `hcl:"extension_images,optional" systemd:"ExtensionImages"`
+	FailureAction   string   `hcl:"failure_action,optional" systemd:"FailureAction"`
 	// Configure how many file descriptors may be stored in the service manager for the service using
 	// <citerefentry><refentrytitle>sd_pid_notify_with_fds</refentrytitle><manvolnum>3</manvolnum></citerefentry>'s
 	// FDSTORE=1 messages. This is useful for implementing services that can restart after an explicit
@@ -234,13 +807,971 @@ type ServiceBlock struct {
 	// url="https://systemd.io/FILE_DESCRIPTOR_STORE">File Descriptor Store</ulink> overview.
 	//
 	FileDescriptorStoreMax uint64 `hcl:"file_descriptor_store_max,optional" systemd:"FileDescriptorStoreMax"`
+	// Takes one of no, yes, restart and controls when to release the service's file descriptor store (i.e.
+	// when to close the contained file descriptors, if any). If set to no the file descriptor store is
+	// automatically released when the service is stopped; if restart (the default) it is kept around as
+	// long as the unit is neither inactive nor failed, or a job is queued for the service, or the service
+	// is expected to be restarted. If yes the file descriptor store is kept around and garbage collection
+	// of the unit is disabled. The latter is useful to keep entries in the file descriptor store pinned
+	// until the unit is removed, the service manager exits, or the file descriptors get EPOLLHUP or
+	// EPOLLERR.
+	//
+	// Use systemctl clean --what=fdstore … to release the file descriptor store explicitly.
+	//
+	FileDescriptorStorePreserve string `hcl:"file_descriptor_store_preserve,optional" systemd:"FileDescriptorStorePreserve"`
+	// Specifies which signal to send to remaining processes after a timeout if SendSIGKILL= is enabled.
+	// The signal configured here should be one that is not typically caught and processed by services
+	// (SIGTERM is not suitable). Developers can find it useful to use this to generate a coredump to
+	// troubleshoot why a service did not terminate upon receiving the initial SIGTERM signal. This can be
+	// achieved by configuring LimitCORE= and setting FinalKillSignal= to either SIGQUIT or SIGABRT.
+	// Defaults to SIGKILL.
+	FinalKillSignal syscall.Signal `unitd:"final_kill_signal,optional" systemd:"FinalKillSignal"`
+	// Set the UNIX user or group that the processes are executed as, respectively. Takes a single user or
+	// group name, or a numeric ID as argument. For system services (services run by the system service
+	// manager, i.e. managed by PID 1) and for user services of the root user (services managed by root's
+	// instance of systemd --user), the default is root, but User= may be used to specify a different user.
+	// For user services of any other user, switching user identity is not permitted, hence the only valid
+	// setting is the same user the user's service manager is running as. If no group is set, the default
+	// group of the user is used. This setting does not affect commands whose command line is prefixed with
+	// +.
+	//
+	// Note that this enforces only weak restrictions on the user/group name syntax, but will generate
+	// warnings in many cases where user/group names do not adhere to the following rules: the specified
+	// name should consist only of the characters a-z, A-Z, 0-9, _ and -, except for the first character
+	// which must be one of a-z, A-Z and _ (i.e. digits and - are not permitted as first character). The
+	// user/group name must have at least one character, and at most 31. These restrictions are made in
+	// order to avoid ambiguities and to ensure user/group names and unit files remain portable among Linux
+	// systems. For further details on the names accepted and the names warned about see <ulink
+	// url="https://systemd.io/USER_NAMES">User/Group Name Syntax</ulink>.
+	//
+	// When used in conjunction with DynamicUser= the user/group name specified is dynamically allocated at
+	// the time the service is started, and released at the time the service is stopped — unless it is
+	// already allocated statically (see below). If DynamicUser= is not used the specified user and group
+	// must have been created statically in the user database no later than the moment the service is
+	// started, for example using the
+	// <citerefentry><refentrytitle>sysusers.d</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// facility, which is applied at boot or package install time. If the user does not exist by then
+	// program invocation will fail.
+	//
+	// If the User= setting is used the supplementary group list is initialized from the specified user's
+	// default group list, as defined in the system's user and group database. Additional groups may be
+	// configured through the SupplementaryGroups= setting (see below).
+	//
+	Group string `hcl:"group,optional" systemd:"Group"`
 	// Takes a boolean value that specifies whether systemd should try to guess the main PID of a service
 	// if it cannot be determined reliably. This option is ignored unless Type=forking is set and PIDFile=
 	// is unset because for the other types or with an explicitly configured PID file, the main PID is
 	// always known. The guessing algorithm might come to incorrect conclusions if a daemon consists of
 	// more than one process. If the main PID cannot be determined, failure detection and automatic
 	// restarting of a service will not work reliably. Defaults to yes.
-	GuessMainPID bool `hcl:"guess_main_pid,optional" systemd:"GuessMainPID"`
+	GuessMainPID             bool     `hcl:"guess_main_pid,optional" systemd:"GuessMainPID"`
+	IOAccounting             bool     `hcl:"io_accounting,optional" systemd:"IOAccounting"`
+	IODeviceLatencyTargetSec []string `hcl:"io_device_latency_target_sec,optional" systemd:"IODeviceLatencyTargetSec"`
+	IODeviceWeight           []string `hcl:"io_device_weight,optional" systemd:"IODeviceWeight"`
+	IOPressureThresholdSec   int      `hcl:"io_pressure_threshold_sec,optional" systemd:"IOPressureThresholdSec"`
+	IOPressureWatch          string   `hcl:"io_pressure_watch,optional" systemd:"IOPressureWatch"`
+	IOReadBandwidthMax       []string `hcl:"io_read_bandwidth_max,optional" systemd:"IOReadBandwidthMax"`
+	IOReadIOPSMax            []string `hcl:"io_read_iops_max,optional" systemd:"IOReadIOPSMax"`
+	// Sets the I/O scheduling class for executed processes. Takes one of the strings realtime, best-effort
+	// or idle. The kernel's default scheduling class is best-effort at a priority of 4. If the empty
+	// string is assigned to this option, all prior assignments to both IOSchedulingClass= and
+	// IOSchedulingPriority= have no effect. See
+	// <citerefentry><refentrytitle>ioprio_set</refentrytitle><manvolnum>2</manvolnum></citerefentry> for
+	// details.
+	IOSchedulingClass string `hcl:"io_scheduling_class,optional" systemd:"IOSchedulingClass"`
+	// Sets the I/O scheduling priority for executed processes. Takes an integer between 0 (highest
+	// priority) and 7 (lowest priority). In case of I/O contention, smaller values mean more I/O bandwidth
+	// is made available to the unit's processes, larger values mean less bandwidth. The available
+	// priorities depend on the selected I/O scheduling class (see above). If the empty string is assigned
+	// to this option, all prior assignments to both IOSchedulingClass= and IOSchedulingPriority= have no
+	// effect. For the kernel's default scheduling class (best-effort) this defaults to 4. See
+	// <citerefentry><refentrytitle>ioprio_set</refentrytitle><manvolnum>2</manvolnum></citerefentry> for
+	// details.
+	IOSchedulingPriority int      `hcl:"io_scheduling_priority,optional" systemd:"IOSchedulingPriority"`
+	IOWeight             uint64   `hcl:"io_weight,optional" systemd:"IOWeight"`
+	IOWriteBandwidthMax  []string `hcl:"io_write_bandwidth_max,optional" systemd:"IOWriteBandwidthMax"`
+	IOWriteIOPSMax       []string `hcl:"io_write_iops_max,optional" systemd:"IOWriteIOPSMax"`
+	IPAccounting         bool     `hcl:"ip_accounting,optional" systemd:"IPAccounting"`
+	IPAddressAllow       []string `hcl:"ip_address_allow,optional" systemd:"IPAddressAllow"`
+	IPAddressDeny        []string `hcl:"ip_address_deny,optional" systemd:"IPAddressDeny"`
+	// Takes an absolute file system path referring to a Linux IPC namespace pseudo-file (i.e. a file like
+	// /proc/$PID/ns/ipc or a bind mount or symlink to one). When set the invoked processes are added to
+	// the network namespace referenced by that path. The path has to point to a valid namespace file at
+	// the moment the processes are forked off. If this option is used PrivateIPC= has no effect. If this
+	// option is used together with JoinsNamespaceOf= then it only has an effect if this unit is started
+	// before any of the listed units that have PrivateIPC= or IPCNamespacePath= configured, as otherwise
+	// the network namespace of those units is reused.
+	IPCNamespacePath    string   `hcl:"ipc_namespace_path,optional" systemd:"IPCNamespacePath"`
+	IPEgressFilterPath  []string `hcl:"ip_egress_filter_path,optional" systemd:"IPEgressFilterPath"`
+	IPIngressFilterPath []string `hcl:"ip_ingress_filter_path,optional" systemd:"IPIngressFilterPath"`
+	// Takes a boolean argument. If true, SIGPIPE is ignored in the executed process. Defaults to true
+	// since SIGPIPE is generally only useful in shell pipelines.
+	IgnoreSIGPIPE bool `hcl:"ignore_sigpipe,optional" systemd:"IgnoreSIGPIPE"`
+	// Pass one or more credentials to the unit. Takes a credential name for which we will attempt to find
+	// a credential that the service manager itself received under the specified name — which may be used
+	// to propagate credentials from an invoking environment (e.g. a container manager that invoked the
+	// service manager) into a service. If the credential name is a glob, all credentials matching the glob
+	// are passed to the unit. Matching credentials are searched for in the system credentials, the
+	// encrypted system credentials, and under /etc/credstore/, /run/credstore/, /usr/lib/credstore/,
+	// /run/credstore.encrypted/, /etc/credstore.encrypted/, and /usr/lib/credstore.encrypted/ in that
+	// order. When multiple credentials of the same name are found, the first one found is used.
+	//
+	// The globbing expression implements a restrictive subset of <citerefentry
+	// project='man-pages'><refentrytitle>glob</refentrytitle><manvolnum>7</manvolnum></citerefentry>: only
+	// a single trailing * wildcard may be specified. Both ? and [] wildcards are not permitted, nor are *
+	// wildcards anywhere except at the end of the glob expression.
+	//
+	// Optionally, the credential name or glob may be followed by a colon followed by a rename pattern. If
+	// specified, all credentials matching the credential name or glob are renamed according to the given
+	// pattern. For example, if ImportCredential=my.original.cred:my.renamed.cred is specified, the service
+	// manager will read the my.original.cred credential and make it available as the my.renamed.cred
+	// credential to the service. Similarly, if ImportCredential=my.original.*:my.renamed. is specified,
+	// the service manager will read all credentials starting with my.original. and make them available as
+	// my.renamed.xxx to the service.
+	//
+	// If ImportCredential= is specified multiple times and multiple credentials end up with the same name
+	// after renaming, the first one is kept and later ones are dropped.
+	//
+	// When multiple credentials of the same name are found, credentials found by LoadCredential= and
+	// LoadCredentialEncrypted= take priority over credentials found by ImportCredential=.
+	//
+	// Note that if decryption or authentication of a credential picked up as result of ImportCredential=
+	// fails it will be skipped gracefully (a warning is generated, but the credential will not be made
+	// available to the invoked service). This is different for those configured via
+	// SetCredentialEncrypted=/LoadCredentialEncrypted=, where failed decryption/authentication will result
+	// in service failure.
+	//
+	ImportCredential        []string `hcl:"import_credential,optional" systemd:"ImportCredential"`
+	InaccessibleDirectories []string `hcl:"inaccessible_directories,optional" systemd:"InaccessibleDirectories"`
+	// Sets up a new file system namespace for executed processes. These options may be used to limit
+	// access a process has to the file system. Each setting takes a space-separated list of paths relative
+	// to the host's root directory (i.e. the system running the service manager). Note that if paths
+	// contain symlinks, they are resolved relative to the root directory set with
+	// RootDirectory=/RootImage=.
+	//
+	// Paths listed in ReadWritePaths= are accessible from within the namespace with the same access modes
+	// as from outside of it. Paths listed in ReadOnlyPaths= are accessible for reading only, writing will
+	// be refused even if the usual file access controls would permit this. Nest ReadWritePaths= inside of
+	// ReadOnlyPaths= in order to provide writable subdirectories within read-only directories. Use
+	// ReadWritePaths= in order to allow-list specific paths for write access if ProtectSystem=strict is
+	// used. Note that ReadWritePaths= cannot be used to gain write access to a file system whose
+	// superblock is mounted read-only. On Linux, for each mount point write access is granted only if the
+	// mount point itself and the file system superblock backing it are not marked read-only.
+	// ReadWritePaths= only controls the former, not the latter, hence a read-only file system superblock
+	// remains protected.
+	//
+	// Paths listed in InaccessiblePaths= will be made inaccessible for processes inside the namespace
+	// along with everything below them in the file system hierarchy. This may be more restrictive than
+	// desired, because it is not possible to nest ReadWritePaths=, ReadOnlyPaths=, BindPaths=, or
+	// BindReadOnlyPaths= inside it. For a more flexible option, see TemporaryFileSystem=.
+	//
+	// Content in paths listed in NoExecPaths= are not executable even if the usual file access controls
+	// would permit this. Nest ExecPaths= inside of NoExecPaths= in order to provide executable content
+	// within non-executable directories.
+	//
+	// Non-directory paths may be specified as well. These options may be specified more than once, in
+	// which case all paths listed will have limited access from within the namespace. If the empty string
+	// is assigned to this option, the specific list is reset, and all prior assignments have no effect.
+	//
+	// Paths in ReadWritePaths=, ReadOnlyPaths=, InaccessiblePaths=, ExecPaths= and NoExecPaths= may be
+	// prefixed with -, in which case they will be ignored when they do not exist. If prefixed with + the
+	// paths are taken relative to the root directory of the unit, as configured with
+	// RootDirectory=/RootImage=, instead of relative to the root directory of the host (see above). When
+	// combining - and + on the same path make sure to specify - first, and + second.
+	//
+	// Note that these settings will disconnect propagation of mounts from the unit's processes to the
+	// host. This means that this setting may not be used for services which shall be able to install mount
+	// points in the main mount namespace. For ReadWritePaths= and ReadOnlyPaths=, propagation in the other
+	// direction is not affected, i.e. mounts created on the host generally appear in the unit processes'
+	// namespace, and mounts removed on the host also disappear there too. In particular, note that mount
+	// propagation from host to unit will result in unmodified mounts to be created in the unit's
+	// namespace, i.e. writable mounts appearing on the host will be writable in the unit's namespace too,
+	// even when propagated below a path marked with ReadOnlyPaths=! Restricting access with these options
+	// hence does not extend to submounts of a directory that are created later on. This means the
+	// lock-down offered by that setting is not complete, and does not offer full protection.
+	//
+	// Note that the effect of these settings may be undone by privileged processes. In order to set up an
+	// effective sandboxed environment for a unit it is thus recommended to combine these settings with
+	// either CapabilityBoundingSet=~CAP_SYS_ADMIN or SystemCallFilter=~@mount.
+	//
+	// Please be extra careful when applying these options to API file systems (a list of them could be
+	// found in MountAPIVPS=), since they may be required for basic system functionalities. Moreover, /run/
+	// needs to be writable for setting up mount namespace and propagation.
+	//
+	// Simple allow-list example using these directives: <programlisting>[Service] ReadOnlyPaths=/
+	// ReadWritePaths=/var /run InaccessiblePaths=-/lost+found NoExecPaths=/ ExecPaths=/usr/sbin/my_daemon
+	// /usr/lib /usr/lib64 </programlisting>
+	//
+	InaccessiblePaths []string `hcl:"inaccessible_paths,optional" systemd:"InaccessiblePaths"`
+	// Controls how the kernel session keyring is set up for the service (see <citerefentry
+	// project='man-pages'><refentrytitle>session-keyring</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// for details on the session keyring). Takes one of inherit, private, shared. If set to inherit no
+	// special keyring setup is done, and the kernel's default behaviour is applied. If private is used a
+	// new session keyring is allocated when a service process is invoked, and it is not linked up with any
+	// user keyring. This is the recommended setting for system services, as this ensures that multiple
+	// services running under the same system user ID (in particular the root user) do not share their key
+	// material among each other. If shared is used a new session keyring is allocated as for private, but
+	// the user keyring of the user configured with User= is linked into it, so that keys assigned to the
+	// user may be requested by the unit's processes. In this mode multiple units running processes under
+	// the same user ID may share key material. Unless inherit is selected the unique invocation ID for the
+	// unit (see below) is added as a protected key by the name invocation_id to the newly created session
+	// keyring. Defaults to private for services of the system service manager and to inherit for
+	// non-service units and for services of the user service manager.
+	KeyringMode string `hcl:"keyring_mode,optional" systemd:"KeyringMode"`
+	// Specifies how processes of this unit shall be killed. One of control-group, mixed, process, none.
+	//
+	// If set to control-group, all remaining processes in the control group of this unit will be killed on
+	// unit stop (for services: after the stop command is executed, as configured with ExecStop=). If set
+	// to mixed, the SIGTERM signal (see below) is sent to the main process while the subsequent SIGKILL
+	// signal (see below) is sent to all remaining processes of the unit's control group. If set to
+	// process, only the main process itself is killed (not recommended!). If set to none, no process is
+	// killed (strongly recommended against!). In this case, only the stop command will be executed on unit
+	// stop, but no process will be killed otherwise. Processes remaining alive after stop are left in
+	// their control group and the control group continues to exist after stop unless empty.
+	//
+	// Note that it is not recommended to set KillMode= to process or even none, as this allows processes
+	// to escape the service manager's lifecycle and resource management, and to remain running even while
+	// their service is considered stopped and is assumed to not consume any resources.
+	//
+	// Processes will first be terminated via SIGTERM (unless the signal to send is changed via KillSignal=
+	// or RestartKillSignal=). Optionally, this is immediately followed by a SIGHUP (if enabled with
+	// SendSIGHUP=). If processes still remain after: <itemizedlist> <listitem><para>the main process of a
+	// unit has exited (applies to KillMode=: mixed)</para></listitem> <listitem><para>the delay configured
+	// via the TimeoutStopSec= has passed (applies to KillMode=: control-group, mixed,
+	// process)</para></listitem> </itemizedlist> the termination request is repeated with the SIGKILL
+	// signal or the signal specified via FinalKillSignal= (unless this is disabled via the SendSIGKILL=
+	// option). See
+	// <citerefentry><refentrytitle>kill</refentrytitle><manvolnum>2</manvolnum></citerefentry> for more
+	// information.
+	//
+	// Defaults to control-group.
+	//
+	KillMode string `hcl:"kill_mode,optional" systemd:"KillMode"`
+	// Specifies which signal to use when stopping a service. This controls the signal that is sent as
+	// first step of shutting down a unit (see above), and is usually followed by SIGKILL (see above and
+	// below). For a list of valid signals, see <citerefentry
+	// project='man-pages'><refentrytitle>signal</refentrytitle><manvolnum>7</manvolnum></citerefentry>.
+	// Defaults to SIGTERM.
+	//
+	// Note that, right after sending the signal specified in this setting, systemd will always send
+	// SIGCONT, to ensure that even suspended tasks can be terminated cleanly.
+	//
+	KillSignal syscall.Signal `unitd:"kill_signal,optional" systemd:"KillSignal"`
+	// ulimit -v
+	LimitAS string `hcl:"limit_as,optional" systemd:"LimitAS"`
+	// ulimit -c
+	LimitCORE string `hcl:"limit_core,optional" systemd:"LimitCORE"`
+	// ulimit -t
+	LimitCPU string `hcl:"limit_cpu,optional" systemd:"LimitCPU"`
+	// ulimit -d
+	LimitDATA string `hcl:"limit_data,optional" systemd:"LimitDATA"`
+	// ulimit -f
+	LimitFSIZE string `hcl:"limit_fsize,optional" systemd:"LimitFSIZE"`
+	// ulimit -x
+	LimitLOCKS string `hcl:"limit_locks,optional" systemd:"LimitLOCKS"`
+	// ulimit -l
+	LimitMEMLOCK string `hcl:"limit_memlock,optional" systemd:"LimitMEMLOCK"`
+	// ulimit -q
+	LimitMSGQUEUE string `hcl:"limit_msgqueue,optional" systemd:"LimitMSGQUEUE"`
+	// ulimit -e
+	LimitNICE string `hcl:"limit_nice,optional" systemd:"LimitNICE"`
+	// ulimit -n
+	LimitNOFILE string `hcl:"limit_nofile,optional" systemd:"LimitNOFILE"`
+	// ulimit -u
+	LimitNPROC string `hcl:"limit_nproc,optional" systemd:"LimitNPROC"`
+	// ulimit -m
+	LimitRSS string `hcl:"limit_rss,optional" systemd:"LimitRSS"`
+	// ulimit -r
+	LimitRTPRIO string `hcl:"limit_rtprio,optional" systemd:"LimitRTPRIO"`
+	// ulimit -R
+	LimitRTTIME string `hcl:"limit_rttime,optional" systemd:"LimitRTTIME"`
+	// ulimit -i
+	LimitSIGPENDING string `hcl:"limit_sigpending,optional" systemd:"LimitSIGPENDING"`
+	// ulimit -s
+	LimitSTACK string `hcl:"limit_stack,optional" systemd:"LimitSTACK"`
+	// Pass a credential to the unit. Credentials are limited-size binary or textual objects that may be
+	// passed to unit processes. They are primarily intended for passing cryptographic keys (both public
+	// and private) or certificates, user account information or identity information from host to
+	// services, but can be freely used to pass any kind of limited-size information to a service. The data
+	// is accessible from the unit's processes via the file system, at a read-only location that (if
+	// possible and permitted) is backed by non-swappable memory. The data is only accessible to the user
+	// associated with the unit, via the User=/DynamicUser= settings (as well as the superuser). When
+	// available, the location of credentials is exported as the $CREDENTIALS_DIRECTORY environment
+	// variable to the unit's processes.
+	//
+	// The LoadCredential= setting takes a textual ID to use as name for a credential plus a file system
+	// path, separated by a colon. The ID must be a short ASCII string suitable as filename in the
+	// filesystem, and may be chosen freely by the user. If the specified path is absolute it is opened as
+	// regular file and the credential data is read from it. If the absolute path refers to an AF_UNIX
+	// stream socket in the file system a connection is made to it (once at process invocation) and the
+	// credential data read from the connection, providing an easy IPC integration point for dynamically
+	// transferring credentials from other services.
+	//
+	// If the specified path is not absolute and itself qualifies as valid credential identifier it is
+	// attempted to find a credential that the service manager itself received under the specified name —
+	// which may be used to propagate credentials from an invoking environment (e.g. a container manager
+	// that invoked the service manager) into a service. If no matching passed credential is found, the
+	// system service manager will search the directories /etc/credstore/, /run/credstore/ and
+	// /usr/lib/credstore/ for files under the credential's name — which hence are recommended locations
+	// for credential data on disk. If LoadCredentialEncrypted= is used /run/credstore.encrypted/,
+	// /etc/credstore.encrypted/, and /usr/lib/credstore.encrypted/ are searched as well. The per-user
+	// service manager will search $XDG_CONFIG_HOME/credstore/, $XDG_RUNTIME_DIR/credstore/,
+	// $HOME/.local/lib/credstore/ (and the counterparts ending with …/credstore.encrypted/) instead. The
+	// <citerefentry><refentrytitle>systemd-path</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+	// tool may be used to query the precise credential store search path.
+	//
+	// If the file system path is omitted it is chosen identical to the credential name, i.e. this is a
+	// terse way to declare credentials to inherit from the service manager or credstore directories into a
+	// service. This option may be used multiple times, each time defining an additional credential to pass
+	// to the unit.
+	//
+	// Note that if the path is not specified or a valid credential identifier is given, i.e. in the above
+	// two cases, a missing credential is not considered fatal.
+	//
+	// If an absolute path referring to a directory is specified, every file in that directory
+	// (recursively) will be loaded as a separate credential. The ID for each credential will be the
+	// provided ID suffixed with _$FILENAME (e.g., Key_file1). When loading from a directory, symlinks will
+	// be ignored.
+	//
+	// The contents of the file/socket may be arbitrary binary or textual data, including newline
+	// characters and NUL bytes.
+	//
+	// The LoadCredentialEncrypted= setting is identical to LoadCredential=, except that the credential
+	// data is decrypted and authenticated before being passed on to the executed processes. Specifically,
+	// the referenced path should refer to a file or socket with an encrypted credential, as implemented by
+	// <citerefentry><refentrytitle>systemd-creds</refentrytitle><manvolnum>1</manvolnum></citerefentry>.
+	// This credential is loaded, decrypted, authenticated and then passed to the application in plaintext
+	// form, in the same way a regular credential specified via LoadCredential= would be. A credential
+	// configured this way may be symmetrically encrypted/authenticated with a secret key derived from the
+	// system's TPM2 security chip, or with a secret key stored in /var/lib/systemd/credential.secret, or
+	// with both. Using encrypted and authenticated credentials improves security as credentials are not
+	// stored in plaintext and only authenticated and decrypted into plaintext the moment a service
+	// requiring them is started. Moreover, credentials may be bound to the local hardware and
+	// installations, so that they cannot easily be analyzed offline, or be generated externally. See
+	// <citerefentry><refentrytitle>systemd.resource-control</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// for the details about DevicePolicy= or DeviceAllow=.
+	//
+	// Note that encrypted credentials targeted for services of the per-user service manager must be
+	// encrypted with systemd-creds encrypt --user, and those for the system service manager without the
+	// --user switch. Encrypted credentials are always targeted to a specific user or the system as a
+	// whole, and it is ensured that per-user service managers cannot decrypt secrets intended for the
+	// system or for other users.
+	//
+	// The credential files/IPC sockets must be accessible to the service manager, but do not have to be
+	// directly accessible to the unit's processes: the credential data is read and copied into separate,
+	// read-only copies for the unit that are accessible to appropriately privileged processes. This is
+	// particularly useful in combination with DynamicUser= as this way privileged data can be made
+	// available to processes running under a dynamic UID (i.e. not a previously known one) without having
+	// to open up access to all users.
+	//
+	// In order to reference the path a credential may be read from within a ExecStart= command line use
+	// ${CREDENTIALS_DIRECTORY}/mycred, e.g. ExecStart=cat ${CREDENTIALS_DIRECTORY}/mycred. In order to
+	// reference the path a credential may be read from within a Environment= line use %d/mycred, e.g.
+	// Environment=MYCREDPATH=%d/mycred. For system services the path may also be referenced as
+	// /run/credentials/UNITNAME in cases where no interpolation is possible, e.g. configuration files of
+	// software that does not yet support credentials natively. $CREDENTIALS_DIRECTORY is considered the
+	// primary interface to look for credentials, though, since it also works for user services.
+	//
+	// Currently, an accumulated credential size limit of 1 MB per unit is enforced.
+	//
+	// The service manager itself may receive system credentials that can be propagated to services from a
+	// hosting container manager or VM hypervisor. See the <ulink
+	// url="https://systemd.io/CONTAINER_INTERFACE">Container Interface</ulink> documentation for details
+	// about the former. For the latter, pass <ulink
+	// url="https://www.dmtf.org/standards/smbios">DMI/SMBIOS</ulink> OEM string table entries (field type
+	// 11) with a prefix of io.systemd.credential: or io.systemd.credential.binary:. In both cases a
+	// key/value pair separated by = is expected. In the latter case, the right-hand side is Base64 decoded
+	// when parsed (thus permitting binary data to be passed in). Example <ulink
+	// url="https://www.qemu.org/docs/master/system/index.html">qemu</ulink> switch: -smbios
+	// type=11,value=io.systemd.credential:xx=yy, or -smbios
+	// type=11,value=io.systemd.credential.binary:rick=TmV2ZXIgR29ubmEgR2l2ZSBZb3UgVXA=. Alternatively, use
+	// the qemu fw_cfg node opt/io.systemd.credentials/. Example qemu switch: -fw_cfg
+	// name=opt/io.systemd.credentials/mycred,string=supersecret. They may also be passed from the UEFI
+	// firmware environment via
+	// <citerefentry><refentrytitle>systemd-stub</refentrytitle><manvolnum>7</manvolnum></citerefentry>,
+	// from the initrd (see
+	// <citerefentry><refentrytitle>systemd</refentrytitle><manvolnum>1</manvolnum></citerefentry>), or be
+	// specified on the kernel command line using the systemd.set_credential= and
+	// systemd.set_credential_binary= switches (see
+	// <citerefentry><refentrytitle>systemd</refentrytitle><manvolnum>1</manvolnum></citerefentry> – this
+	// is not recommended since unprivileged userspace can read the kernel command line).
+	//
+	// If referencing an AF_UNIX stream socket to connect to, the connection will originate from an
+	// abstract namespace socket, that includes information about the unit and the credential ID in its
+	// socket name. Use <citerefentry
+	// project='man-pages'><refentrytitle>getpeername</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// to query this information. The returned socket name is formatted as NUL RANDOM /unit/ UNIT / ID,
+	// i.e. a NUL byte (as required for abstract namespace socket names), followed by a random string
+	// (consisting of alphadecimal characters), followed by the literal string /unit/, followed by the
+	// requesting unit name, followed by the literal character /, followed by the textual credential ID
+	// requested. Example: \0adf9d86b6eda275e/unit/foobar.service/credx in case the credential credx is
+	// requested for a unit foobar.service. This functionality is useful for using a single listening
+	// socket to serve credentials to multiple consumers.
+	//
+	// For further information see <ulink url="https://systemd.io/CREDENTIALS">System and Service
+	// Credentials</ulink> documentation.
+	//
+	LoadCredential []string `hcl:"load_credential,optional" systemd:"LoadCredential"`
+	// Pass a credential to the unit. Credentials are limited-size binary or textual objects that may be
+	// passed to unit processes. They are primarily intended for passing cryptographic keys (both public
+	// and private) or certificates, user account information or identity information from host to
+	// services, but can be freely used to pass any kind of limited-size information to a service. The data
+	// is accessible from the unit's processes via the file system, at a read-only location that (if
+	// possible and permitted) is backed by non-swappable memory. The data is only accessible to the user
+	// associated with the unit, via the User=/DynamicUser= settings (as well as the superuser). When
+	// available, the location of credentials is exported as the $CREDENTIALS_DIRECTORY environment
+	// variable to the unit's processes.
+	//
+	// The LoadCredential= setting takes a textual ID to use as name for a credential plus a file system
+	// path, separated by a colon. The ID must be a short ASCII string suitable as filename in the
+	// filesystem, and may be chosen freely by the user. If the specified path is absolute it is opened as
+	// regular file and the credential data is read from it. If the absolute path refers to an AF_UNIX
+	// stream socket in the file system a connection is made to it (once at process invocation) and the
+	// credential data read from the connection, providing an easy IPC integration point for dynamically
+	// transferring credentials from other services.
+	//
+	// If the specified path is not absolute and itself qualifies as valid credential identifier it is
+	// attempted to find a credential that the service manager itself received under the specified name —
+	// which may be used to propagate credentials from an invoking environment (e.g. a container manager
+	// that invoked the service manager) into a service. If no matching passed credential is found, the
+	// system service manager will search the directories /etc/credstore/, /run/credstore/ and
+	// /usr/lib/credstore/ for files under the credential's name — which hence are recommended locations
+	// for credential data on disk. If LoadCredentialEncrypted= is used /run/credstore.encrypted/,
+	// /etc/credstore.encrypted/, and /usr/lib/credstore.encrypted/ are searched as well. The per-user
+	// service manager will search $XDG_CONFIG_HOME/credstore/, $XDG_RUNTIME_DIR/credstore/,
+	// $HOME/.local/lib/credstore/ (and the counterparts ending with …/credstore.encrypted/) instead. The
+	// <citerefentry><refentrytitle>systemd-path</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+	// tool may be used to query the precise credential store search path.
+	//
+	// If the file system path is omitted it is chosen identical to the credential name, i.e. this is a
+	// terse way to declare credentials to inherit from the service manager or credstore directories into a
+	// service. This option may be used multiple times, each time defining an additional credential to pass
+	// to the unit.
+	//
+	// Note that if the path is not specified or a valid credential identifier is given, i.e. in the above
+	// two cases, a missing credential is not considered fatal.
+	//
+	// If an absolute path referring to a directory is specified, every file in that directory
+	// (recursively) will be loaded as a separate credential. The ID for each credential will be the
+	// provided ID suffixed with _$FILENAME (e.g., Key_file1). When loading from a directory, symlinks will
+	// be ignored.
+	//
+	// The contents of the file/socket may be arbitrary binary or textual data, including newline
+	// characters and NUL bytes.
+	//
+	// The LoadCredentialEncrypted= setting is identical to LoadCredential=, except that the credential
+	// data is decrypted and authenticated before being passed on to the executed processes. Specifically,
+	// the referenced path should refer to a file or socket with an encrypted credential, as implemented by
+	// <citerefentry><refentrytitle>systemd-creds</refentrytitle><manvolnum>1</manvolnum></citerefentry>.
+	// This credential is loaded, decrypted, authenticated and then passed to the application in plaintext
+	// form, in the same way a regular credential specified via LoadCredential= would be. A credential
+	// configured this way may be symmetrically encrypted/authenticated with a secret key derived from the
+	// system's TPM2 security chip, or with a secret key stored in /var/lib/systemd/credential.secret, or
+	// with both. Using encrypted and authenticated credentials improves security as credentials are not
+	// stored in plaintext and only authenticated and decrypted into plaintext the moment a service
+	// requiring them is started. Moreover, credentials may be bound to the local hardware and
+	// installations, so that they cannot easily be analyzed offline, or be generated externally. See
+	// <citerefentry><refentrytitle>systemd.resource-control</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// for the details about DevicePolicy= or DeviceAllow=.
+	//
+	// Note that encrypted credentials targeted for services of the per-user service manager must be
+	// encrypted with systemd-creds encrypt --user, and those for the system service manager without the
+	// --user switch. Encrypted credentials are always targeted to a specific user or the system as a
+	// whole, and it is ensured that per-user service managers cannot decrypt secrets intended for the
+	// system or for other users.
+	//
+	// The credential files/IPC sockets must be accessible to the service manager, but do not have to be
+	// directly accessible to the unit's processes: the credential data is read and copied into separate,
+	// read-only copies for the unit that are accessible to appropriately privileged processes. This is
+	// particularly useful in combination with DynamicUser= as this way privileged data can be made
+	// available to processes running under a dynamic UID (i.e. not a previously known one) without having
+	// to open up access to all users.
+	//
+	// In order to reference the path a credential may be read from within a ExecStart= command line use
+	// ${CREDENTIALS_DIRECTORY}/mycred, e.g. ExecStart=cat ${CREDENTIALS_DIRECTORY}/mycred. In order to
+	// reference the path a credential may be read from within a Environment= line use %d/mycred, e.g.
+	// Environment=MYCREDPATH=%d/mycred. For system services the path may also be referenced as
+	// /run/credentials/UNITNAME in cases where no interpolation is possible, e.g. configuration files of
+	// software that does not yet support credentials natively. $CREDENTIALS_DIRECTORY is considered the
+	// primary interface to look for credentials, though, since it also works for user services.
+	//
+	// Currently, an accumulated credential size limit of 1 MB per unit is enforced.
+	//
+	// The service manager itself may receive system credentials that can be propagated to services from a
+	// hosting container manager or VM hypervisor. See the <ulink
+	// url="https://systemd.io/CONTAINER_INTERFACE">Container Interface</ulink> documentation for details
+	// about the former. For the latter, pass <ulink
+	// url="https://www.dmtf.org/standards/smbios">DMI/SMBIOS</ulink> OEM string table entries (field type
+	// 11) with a prefix of io.systemd.credential: or io.systemd.credential.binary:. In both cases a
+	// key/value pair separated by = is expected. In the latter case, the right-hand side is Base64 decoded
+	// when parsed (thus permitting binary data to be passed in). Example <ulink
+	// url="https://www.qemu.org/docs/master/system/index.html">qemu</ulink> switch: -smbios
+	// type=11,value=io.systemd.credential:xx=yy, or -smbios
+	// type=11,value=io.systemd.credential.binary:rick=TmV2ZXIgR29ubmEgR2l2ZSBZb3UgVXA=. Alternatively, use
+	// the qemu fw_cfg node opt/io.systemd.credentials/. Example qemu switch: -fw_cfg
+	// name=opt/io.systemd.credentials/mycred,string=supersecret. They may also be passed from the UEFI
+	// firmware environment via
+	// <citerefentry><refentrytitle>systemd-stub</refentrytitle><manvolnum>7</manvolnum></citerefentry>,
+	// from the initrd (see
+	// <citerefentry><refentrytitle>systemd</refentrytitle><manvolnum>1</manvolnum></citerefentry>), or be
+	// specified on the kernel command line using the systemd.set_credential= and
+	// systemd.set_credential_binary= switches (see
+	// <citerefentry><refentrytitle>systemd</refentrytitle><manvolnum>1</manvolnum></citerefentry> – this
+	// is not recommended since unprivileged userspace can read the kernel command line).
+	//
+	// If referencing an AF_UNIX stream socket to connect to, the connection will originate from an
+	// abstract namespace socket, that includes information about the unit and the credential ID in its
+	// socket name. Use <citerefentry
+	// project='man-pages'><refentrytitle>getpeername</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// to query this information. The returned socket name is formatted as NUL RANDOM /unit/ UNIT / ID,
+	// i.e. a NUL byte (as required for abstract namespace socket names), followed by a random string
+	// (consisting of alphadecimal characters), followed by the literal string /unit/, followed by the
+	// requesting unit name, followed by the literal character /, followed by the textual credential ID
+	// requested. Example: \0adf9d86b6eda275e/unit/foobar.service/credx in case the credential credx is
+	// requested for a unit foobar.service. This functionality is useful for using a single listening
+	// socket to serve credentials to multiple consumers.
+	//
+	// For further information see <ulink url="https://systemd.io/CREDENTIALS">System and Service
+	// Credentials</ulink> documentation.
+	//
+	LoadCredentialEncrypted []string `hcl:"load_credential_encrypted,optional" systemd:"LoadCredentialEncrypted"`
+	// Takes a boolean argument. If set, locks down the <citerefentry
+	// project='man-pages'><refentrytitle>personality</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// system call so that the kernel execution domain may not be changed from the default or the
+	// personality selected with Personality= directive. This may be useful to improve security, because
+	// odd personality emulations may be poorly tested and source of vulnerabilities.
+	LockPersonality bool `hcl:"lock_personality,optional" systemd:"LockPersonality"`
+	// Configures additional log metadata fields to include in all log records generated by processes
+	// associated with this unit, including systemd. This setting takes one or more journal field
+	// assignments in the format FIELD=VALUE separated by whitespace. See
+	// <citerefentry><refentrytitle>systemd.journal-fields</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// for details on the journal field concept. Even though the underlying journal implementation permits
+	// binary field values, this setting accepts only valid UTF-8 values. To include space characters in a
+	// journal field value, enclose the assignment in double quotes ("). <!-- " fake closing quote for
+	// emacs--> The usual specifiers are expanded in all assignments (see below). Note that this setting is
+	// not only useful for attaching additional metadata to log records of a unit, but given that all
+	// fields and values are indexed may also be used to implement cross-unit log record matching. Assign
+	// an empty string to reset the list.
+	//
+	// Note that this functionality is currently only available in system services, not in per-user
+	// services.
+	//
+	LogExtraFields []string `hcl:"log_extra_fields,optional" systemd:"LogExtraFields"`
+	// Define an extended regular expression to filter log messages based on the MESSAGE= field of the
+	// structured message. If the first character of the pattern is ~, log entries matching the pattern
+	// should be discarded. This option takes a single pattern as an argument but can be used multiple
+	// times to create a list of allowed and denied patterns. If the empty string is assigned, the filter
+	// is reset, and all prior assignments will have no effect.
+	//
+	// Because the ~ character is used to define denied patterns, it must be replaced with \x7e to allow a
+	// message starting with ~. For example, ~foobar would add a pattern matching foobar to the deny list,
+	// while \x7efoobar would add a pattern matching ~foobar to the allow list.
+	//
+	// Log messages are tested against denied patterns (if any), then against allowed patterns (if any). If
+	// a log message matches any of the denied patterns, it is discarded immediately without considering
+	// allowed patterns. Remaining log messages are tested against allowed patterns. Messages matching
+	// against none of the allowed pattern are discarded. If no allowed patterns are defined, then all
+	// messages are processed directly after going through denied filters.
+	//
+	// Filtering is based on the unit for which LogFilterPatterns= is defined, meaning log messages coming
+	// from <citerefentry><refentrytitle>systemd</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+	// about the unit are not taken into account. Filtered log messages will not be forwarded to
+	// traditional syslog daemons, the kernel log buffer (kmsg), the systemd console, or sent as wall
+	// messages to all logged-in users.
+	//
+	// Note that this functionality is currently only available in system services, not in per-user
+	// services.
+	//
+	LogFilterPatterns []string `hcl:"log_filter_patterns,optional" systemd:"LogFilterPatterns"`
+	// Sets the maximum log level for log messages generated by this unit. Takes a syslog log level, one of
+	// emerg (lowest log level, only highest priority messages), alert, crit, err, warning, notice, info,
+	// debug (highest log level, also lowest priority messages). See <citerefentry
+	// project='man-pages'><refentrytitle>syslog</refentrytitle><manvolnum>3</manvolnum></citerefentry> for
+	// details. By default, the maximum log level is not overridden.
+	//
+	// This option can be used to configure the logging system to drop log messages of a specific service
+	// above the specified level. For example, set LogLevelMax=info in order to turn off debug logging of a
+	// particularly chatty unit. Alternatively, this option can be used to enable extra logging about a
+	// specific unit by the system or user manager processes without changing the global log level for the
+	// system or user manager processes by setting LogLevelMax=debug.
+	//
+	// Note that the configured level is applied to any log messages written by any of the processes
+	// belonging to this unit, as well as any log messages written by the system or user manager processes
+	// in reference to this unit, sent via any supported logging protocol. The override is applied early in
+	// the logging pipeline, before any kind of further processing is done. Moreover, messages which pass
+	// through this filter successfully might still be dropped by filters applied at a later stage in the
+	// logging subsystem. For example, MaxLevelStore= configured in
+	// <citerefentry><refentrytitle>journald.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// might prohibit messages of higher log levels to be stored on disk, even though the per-unit
+	// LogLevelMax= permitted it to be processed.
+	//
+	LogLevelMax int `hcl:"log_level_max,optional" systemd:"LogLevelMax"`
+	// Run the unit's processes in the specified journal namespace. Expects a short user-defined string
+	// identifying the namespace. If not used the processes of the service are run in the default journal
+	// namespace, i.e. their log stream is collected and processed by systemd-journald.service. If this
+	// option is used any log data generated by processes of this unit (regardless of whether via the
+	// <function>syslog()</function>, journal native logging or stdout/stderr logging) is collected and
+	// processed by an instance of the systemd-journald@.service template unit, which manages the specified
+	// namespace. The log data is stored in a data store independent from the default log namespace's data
+	// store. See
+	// <citerefentry><refentrytitle>systemd-journald.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>
+	// for details about journal namespaces.
+	//
+	// Internally, journal namespaces are implemented through Linux mount namespacing and over-mounting the
+	// directory that contains the relevant AF_UNIX sockets used for logging in the unit's mount namespace.
+	// Since mount namespaces are used this setting disconnects propagation of mounts from the unit's
+	// processes to the host, similarly to how ReadOnlyPaths= and similar settings describe above work.
+	// Journal namespaces may hence not be used for services that need to establish mount points on the
+	// host.
+	//
+	// When this option is used the unit will automatically gain ordering and requirement dependencies on
+	// the two socket units associated with the systemd-journald@.service instance so that they are
+	// automatically established prior to the unit starting up. Note that when this option is used log
+	// output of this service does not appear in the regular
+	// <citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+	// output, unless the --namespace= option is used.
+	//
+	LogNamespace string `hcl:"log_namespace,optional" systemd:"LogNamespace"`
+	// Configures the rate limiting that is applied to log messages generated by this unit. If, in the time
+	// interval defined by LogRateLimitIntervalSec=, more messages than specified in LogRateLimitBurst= are
+	// logged by a service, all further messages within the interval are dropped until the interval is
+	// over. A message about the number of dropped messages is generated. The time specification for
+	// LogRateLimitIntervalSec= may be specified in the following units: "s", "min", "h", "ms", "us". See
+	// <citerefentry><refentrytitle>systemd.time</refentrytitle><manvolnum>7</manvolnum></citerefentry> for
+	// details. The default settings are set by RateLimitIntervalSec= and RateLimitBurst= configured in
+	// <citerefentry><refentrytitle>journald.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>.
+	// Note that this only applies to log messages that are processed by the logging subsystem, i.e. by
+	// <citerefentry><refentrytitle>systemd-journald.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>.
+	// This means that if you connect a service's stderr directly to a file via StandardOutput=file:… or
+	// a similar setting, the rate limiting will not be applied to messages written that way (but it will
+	// be enforced for messages generated via <citerefentry
+	// project='man-pages'><refentrytitle>syslog</refentrytitle><manvolnum>3</manvolnum></citerefentry> and
+	// similar functions).
+	LogRateLimitBurst uint64 `hcl:"log_rate_limit_burst,optional" systemd:"LogRateLimitBurst"`
+	// Configures the rate limiting that is applied to log messages generated by this unit. If, in the time
+	// interval defined by LogRateLimitIntervalSec=, more messages than specified in LogRateLimitBurst= are
+	// logged by a service, all further messages within the interval are dropped until the interval is
+	// over. A message about the number of dropped messages is generated. The time specification for
+	// LogRateLimitIntervalSec= may be specified in the following units: "s", "min", "h", "ms", "us". See
+	// <citerefentry><refentrytitle>systemd.time</refentrytitle><manvolnum>7</manvolnum></citerefentry> for
+	// details. The default settings are set by RateLimitIntervalSec= and RateLimitBurst= configured in
+	// <citerefentry><refentrytitle>journald.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>.
+	// Note that this only applies to log messages that are processed by the logging subsystem, i.e. by
+	// <citerefentry><refentrytitle>systemd-journald.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>.
+	// This means that if you connect a service's stderr directly to a file via StandardOutput=file:… or
+	// a similar setting, the rate limiting will not be applied to messages written that way (but it will
+	// be enforced for messages generated via <citerefentry
+	// project='man-pages'><refentrytitle>syslog</refentrytitle><manvolnum>3</manvolnum></citerefentry> and
+	// similar functions).
+	LogRateLimitIntervalSec int `hcl:"log_rate_limit_interval_sec,optional" systemd:"LogRateLimitIntervalSec"`
+	// /var/log/
+	LogsDirectory []string `hcl:"logs_directory,optional" systemd:"LogsDirectory"`
+	// Takes a boolean argument. If true, a project ID is assigned to the directories specified in
+	// StateDirectory=, CacheDirectory=, or LogsDirectory= respectively, which is used for tracking disk
+	// usage when disk quotas are turned on (see <ulink
+	// url="https://man7.org/linux/man-pages/man8/repquota.8.html">repquota</ulink>). Defaults to false.
+	//
+	// To set and enforce disk quotas, StateDirectoryQuota=, CacheDirectoryQuota=, or LogsDirectoryQuota=
+	// must be specified.
+	//
+	LogsDirectoryAccounting bool `hcl:"logs_directory_accounting,optional" systemd:"LogsDirectoryAccounting"`
+	// Specifies the access mode of the directories specified in RuntimeDirectory=, StateDirectory=,
+	// CacheDirectory=, LogsDirectory=, or ConfigurationDirectory=, respectively, as an octal number.
+	// Defaults to 0755. See "Permissions" in <citerefentry
+	// project='man-pages'><refentrytitle>path_resolution</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// for a discussion of the meaning of permission bits.
+	LogsDirectoryMode os.FileMode `unitd:"logs_directory_mode,optional" systemd:"LogsDirectoryMode"`
+	// Specifies the storage limits for the directories specified in StateDirectory=, CacheDirectory=, or
+	// LogsDirectory= respectively.
+	//
+	// The storage quota is defined in terms of disk blocks and inodes, as per <ulink
+	// url="https://man7.org/linux/man-pages/man2/quotactl.2.html">quotactl</ulink>. Takes an absolute size
+	// limit in bytes. If the value is suffixed with K, M, G or T, the specified size is parsed as
+	// Kilobytes, Megabytes, Gigabytes, or Terabytes (with the base 1024), respectively. If an absolute
+	// size limit is specified, only the block quota is set (rounded up to the nearest block).
+	// Alternatively, a percentage value may be specified, which applies the same percent quota to both
+	// blocks and inodes. Defaults to off, in which case no storage limits will be set.
+	//
+	// Only hard limits are set, not soft limits. If the underlying filesystem for the specified
+	// directories does not support project quotas, the specified storage limits will not be set. In
+	// addition to enabling per-unit quotas with these settings, it is necessary to enable prjquota on the
+	// file system level as well (i.e. tune2fs -Q prjquota). Quotas must also be turned on with <ulink
+	// url="https://linux.die.net/man/8/quotaon">quotaon.</ulink>
+	//
+	LogsDirectoryQuota                  string `hcl:"logs_directory_quota,optional" systemd:"LogsDirectoryQuota"`
+	ManagedOOMMemoryPressure            string `hcl:"managed_oom_memory_pressure,optional" systemd:"ManagedOOMMemoryPressure"`
+	ManagedOOMMemoryPressureDurationSec int    `hcl:"managed_oom_memory_pressure_duration_sec,optional" systemd:"ManagedOOMMemoryPressureDurationSec"`
+	ManagedOOMMemoryPressureLimit       string `hcl:"managed_oom_memory_pressure_limit,optional" systemd:"ManagedOOMMemoryPressureLimit"`
+	ManagedOOMPreference                string `hcl:"managed_oom_preference,optional" systemd:"ManagedOOMPreference"`
+	ManagedOOMSwap                      string `hcl:"managed_oom_swap,optional" systemd:"ManagedOOMSwap"`
+	MemoryAccounting                    bool   `hcl:"memory_accounting,optional" systemd:"MemoryAccounting"`
+	// Takes a boolean argument. If set, attempts to create memory mappings that are writable and
+	// executable at the same time, or to change existing memory mappings to become executable, or mapping
+	// shared memory segments as executable, are prohibited. Specifically, a system call filter is added
+	// (or preferably, an equivalent kernel check is enabled with
+	// <citerefentry><refentrytitle>prctl</refentrytitle><manvolnum>2</manvolnum></citerefentry>) that
+	// rejects <citerefentry><refentrytitle>mmap</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// system calls with both PROT_EXEC and PROT_WRITE set,
+	// <citerefentry><refentrytitle>mprotect</refentrytitle><manvolnum>2</manvolnum></citerefentry> or
+	// <citerefentry><refentrytitle>pkey_mprotect</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// system calls with PROT_EXEC set and
+	// <citerefentry><refentrytitle>shmat</refentrytitle><manvolnum>2</manvolnum></citerefentry> system
+	// calls with SHM_EXEC set. Note that this option is incompatible with programs and libraries that
+	// generate program code dynamically at runtime, including JIT execution engines, executable stacks,
+	// and code "trampoline" feature of various C compilers. This option improves service security, as it
+	// makes harder for software exploits to change running code dynamically. However, the protection can
+	// be circumvented, if the service can write to a filesystem, which is not mounted with noexec (such as
+	// /dev/shm), or it can use <function>memfd_create()</function>. This can be prevented by making such
+	// file systems inaccessible to the service (e.g. InaccessiblePaths=/dev/shm) and installing further
+	// system call filters (SystemCallFilter=~memfd_create). Note that this feature is fully available on
+	// x86-64, and partially on x86. Specifically, the <function>shmat()</function> protection is not
+	// available on x86. Note that on systems supporting multiple ABIs (such as x86/x86-64) it is
+	// recommended to turn off alternative ABIs for services, so that they cannot be used to circumvent the
+	// restrictions of this option. Specifically, it is recommended to combine this option with
+	// SystemCallArchitectures=native or similar.
+	MemoryDenyWriteExecute bool   `hcl:"memory_deny_write_execute,optional" systemd:"MemoryDenyWriteExecute"`
+	MemoryHigh             string `hcl:"memory_high,optional" systemd:"MemoryHigh"`
+	// Takes a boolean argument. When set, it enables KSM (kernel samepage merging) for the processes. KSM
+	// is a memory-saving de-duplication feature. Anonymous memory pages with identical content can be
+	// replaced by a single write-protected page. This feature should only be enabled for jobs that share
+	// the same security domain. For details, see <ulink
+	// url="https://docs.kernel.org/admin-guide/mm/ksm.html">Kernel Samepage Merging</ulink> in the kernel
+	// documentation.
+	//
+	// Note that this functionality might not be available, for example if KSM is disabled in the kernel,
+	// or the kernel does not support controlling KSM at the process level through
+	// <citerefentry><refentrytitle>prctl</refentrytitle><manvolnum>2</manvolnum></citerefentry>.
+	//
+	MemoryKSM                  bool   `hcl:"memory_ksm,optional" systemd:"MemoryKSM"`
+	MemoryLow                  string `hcl:"memory_low,optional" systemd:"MemoryLow"`
+	MemoryMax                  string `hcl:"memory_max,optional" systemd:"MemoryMax"`
+	MemoryMin                  string `hcl:"memory_min,optional" systemd:"MemoryMin"`
+	MemoryPressureThresholdSec int    `hcl:"memory_pressure_threshold_sec,optional" systemd:"MemoryPressureThresholdSec"`
+	MemoryPressureWatch        string `hcl:"memory_pressure_watch,optional" systemd:"MemoryPressureWatch"`
+	MemorySwapMax              string `hcl:"memory_swap_max,optional" systemd:"MemorySwapMax"`
+	// Transparent Hugepages (THPs) is a Linux kernel feature that manages memory using larger pages (2MB
+	// on x86, compared to the default 4KB). The main goal is to improve memory management efficiency and
+	// system performance, especially for memory-intensive applications. However, it can cause drawbacks in
+	// some scenarios, such as memory regression and latency spikes. THP policy is governed for the entire
+	// system via /sys/kernel/mm/transparent_hugepage/enabled. However, it can be overridden for individual
+	// workloads via
+	// <citerefentry><refentrytitle>prctl</refentrytitle><manvolnum>2</manvolnum></citerefentry>.
+	// MemoryTHP= may be used to disable THPs at process invocation time to stop providing THPs for
+	// workloads where the drawbacks outweigh the advantages. When MemoryTHP= is set to inherit or not set
+	// at all, systemd inherits THP settings from the process that starts it and no
+	// <citerefentry><refentrytitle>prctl</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// PR_SET_THP_DISABLE call is made. When set to disable, MemoryTHP= disables THPs completely for the
+	// process, irrespecitive of global THP controls. When set to madvise, MemoryTHP= disables THPs for the
+	// process except when specifically requested via
+	// <citerefentry><refentrytitle>madvise</refentrytitle><manvolnum>2</manvolnum></citerefentry> by the
+	// process with MADV_HUGEPAGE or MADV_COLLAPSE. When set to system, MemoryTHP= resets the THP policy to
+	// system wide policy. This can be used when the process that starts systemd has already disabled THPs
+	// via PR_SET_THP_DISABLE, and we want to restore the system default THP setting at process invocation
+	// time. For details, see <ulink
+	// url="https://docs.kernel.org/admin-guide/mm/transhuge.html">Transparent Hugepage Support</ulink> in
+	// the kernel documentation.
+	//
+	// Note that this functionality might not be available, for example if THP is disabled in the kernel,
+	// or the kernel does not support controlling THP at the process level through
+	// <citerefentry><refentrytitle>prctl</refentrytitle><manvolnum>2</manvolnum></citerefentry>.
+	//
+	MemoryTHP            string `hcl:"memory_thp,optional" systemd:"MemoryTHP"`
+	MemoryZSwapMax       string `hcl:"memory_z_swap_max,optional" systemd:"MemoryZSwapMax"`
+	MemoryZSwapWriteback bool   `hcl:"memory_z_swap_writeback,optional" systemd:"MemoryZSwapWriteback"`
+	// Takes a boolean argument. If on, a private mount namespace for the unit's processes is created and
+	// the API file systems /proc/, /sys/, /dev/ and /run/ (as an empty tmpfs) are mounted inside of it,
+	// unless they are already mounted. Note that this option has no effect unless used in conjunction with
+	// RootDirectory=/RootImage= as these four mounts are generally mounted in the host anyway, and unless
+	// the root directory is changed, the private mount namespace will be a 1:1 copy of the host's, and
+	// include these four mounts. Note that the /dev/ file system of the host is bind mounted if this
+	// option is used without PrivateDevices=. To run the service with a private, minimal version of /dev/,
+	// combine this option with PrivateDevices=.
+	//
+	// In order to allow propagating mounts at runtime in a safe manner, /run/systemd/propagate/ on the
+	// host will be used to set up new mounts, and /run/host/incoming/ in the private namespace will be
+	// used as an intermediate step to store them before being moved to the final mount point.
+	//
+	MountAPIVFS bool `hcl:"mount_apivfs,optional" systemd:"MountAPIVFS"`
+	// Takes a mount propagation setting: shared, slave or private, which controls whether file system
+	// mount points in the file system namespaces set up for this unit's processes will receive or
+	// propagate mounts and unmounts from other file system namespaces. See <citerefentry
+	// project='man-pages'><refentrytitle>mount</refentrytitle><manvolnum>2</manvolnum></citerefentry> for
+	// details on mount propagation, and the three propagation flags in particular.
+	//
+	// This setting only controls the final propagation setting in effect on all mount points of the file
+	// system namespace created for each process of this unit. Other file system namespacing unit settings
+	// (see the discussion in PrivateMounts= above) will implicitly disable mount and unmount propagation
+	// from the unit's processes towards the host by changing the propagation setting of all mount points
+	// in the unit's file system namespace to slave first. Setting this option to shared does not
+	// reestablish propagation in that case.
+	//
+	// If not set – but file system namespaces are enabled through another file system namespace unit
+	// setting – shared mount propagation is used, but — as mentioned — as slave is applied first,
+	// propagation from the unit's processes to the host is still turned off.
+	//
+	// It is not recommended to use private mount propagation for units, as this means temporary mounts
+	// (such as removable media) of the host will stay mounted and thus indefinitely busy in forked off
+	// processes, as unmount propagation events will not be received by the file system namespace of the
+	// unit.
+	//
+	// Usually, it is best to leave this setting unmodified, and use higher level file system namespacing
+	// options instead, in particular PrivateMounts=, see above.
+	//
+	MountFlags string `hcl:"mount_flags,optional" systemd:"MountFlags"`
+	// Takes an image policy string as per
+	// <citerefentry><refentrytitle>systemd.image-policy</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// to use when mounting the disk images (DDI) specified in RootImage=, MountImage=, ExtensionImage=,
+	// respectively. If not specified the following policy string is the default for RootImagePolicy= and
+	// MountImagePolicy:
+	//
+	// The default policy for ExtensionImagePolicy= is:
+	//
+	MountImagePolicy string `hcl:"mount_image_policy,optional" systemd:"MountImagePolicy"`
+	// This setting is similar to RootImage= in that it mounts a file system hierarchy from a block device
+	// node or loopback file, but the destination directory can be specified as well as mount options. This
+	// option expects a whitespace separated list of mount definitions. Each definition consists of a
+	// colon-separated tuple of source path and destination definitions, optionally followed by another
+	// colon and a list of mount options.
+	//
+	// Mount options may be defined as a single comma-separated list of options, in which case they will be
+	// implicitly applied to the root partition on the image, or a series of colon-separated tuples of
+	// partition name and mount options. Valid partition names and mount options are the same as for
+	// RootImageOptions= setting described above.
+	//
+	// Each mount definition may be prefixed with -, in which case it will be ignored when its source path
+	// does not exist. The source argument is a path to a block device node or regular file. If source or
+	// destination contain a :, it needs to be escaped as \:. The device node or file system image file
+	// needs to follow the same rules as specified for RootImage=. Any mounts created with this option are
+	// specific to the unit, and are not visible in the host's mount table.
+	//
+	// These settings may be used more than once, each usage appends to the unit's list of mount paths. If
+	// the empty string is assigned, the entire list of mount paths defined prior to this is reset.
+	//
+	// Note that the destination directory must exist or systemd must be able to create it. Thus, it is not
+	// possible to use those options for mount points nested underneath paths specified in
+	// InaccessiblePaths=, or under /home/ and other protected directories if ProtectHome=yes is specified.
+	//
+	// When DevicePolicy= is set to closed or strict, or set to auto and DeviceAllow= is set, then this
+	// setting adds /dev/loop-control with rw mode, block-loop and block-blkext with rwm mode to
+	// DeviceAllow=. See
+	// <citerefentry><refentrytitle>systemd.resource-control</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// for the details about DevicePolicy= or DeviceAllow=. Also, see PrivateDevices= below, as it may
+	// change the setting of DevicePolicy=.
+	//
+	MountImages []string `hcl:"mount_images,optional" systemd:"MountImages"`
+	NFTSet      []string `hcl:"nft_set,optional" systemd:"NFTSet"`
+	// Controls the NUMA node list which will be applied alongside with selected NUMA policy. Takes a list
+	// of NUMA nodes and has the same syntax as a list of CPUs for CPUAffinity= option or special "all"
+	// value which will include all available NUMA nodes in the mask. Note that the list of NUMA nodes is
+	// not required for default and local policies and for preferred policy we expect a single NUMA node.
+	NUMAMask string `hcl:"numa_mask,optional" systemd:"NUMAMask"`
+	// Controls the NUMA memory policy of the executed processes. Takes a policy type, one of: default,
+	// preferred, bind, interleave and local. A list of NUMA nodes that should be associated with the
+	// policy must be specified in NUMAMask=. For more details on each policy please see,
+	// <citerefentry><refentrytitle>set_mempolicy</refentrytitle><manvolnum>2</manvolnum></citerefentry>.
+	// For overall overview of NUMA support in Linux see, <citerefentry
+	// project='man-pages'><refentrytitle>numa</refentrytitle><manvolnum>7</manvolnum></citerefentry>.
+	NUMAPolicy string `hcl:"numa_policy,optional" systemd:"NUMAPolicy"`
+	// Takes an absolute file system path referring to a Linux network namespace pseudo-file (i.e. a file
+	// like /proc/$PID/ns/net or a bind mount or symlink to one). When set the invoked processes are added
+	// to the network namespace referenced by that path. The path has to point to a valid namespace file at
+	// the moment the processes are forked off. If this option is used PrivateNetwork= has no effect. If
+	// this option is used together with JoinsNamespaceOf= then it only has an effect if this unit is
+	// started before any of the listed units that have PrivateNetwork= or NetworkNamespacePath=
+	// configured, as otherwise the network namespace of those units is reused.
+	//
+	// When this option is enabled, PrivateMounts= is implied unless it is explicitly disabled, and /sys
+	// will be remounted to associate it with the new network namespace.
+	//
+	// When this option is used on a socket unit any sockets bound on behalf of this unit will be bound
+	// within the specified network namespace.
+	//
+	NetworkNamespacePath string `hcl:"network_namespace_path,optional" systemd:"NetworkNamespacePath"`
+	// Sets the default nice level (scheduling priority) for executed processes. Takes an integer between
+	// -20 (highest priority) and 19 (lowest priority). In case of resource contention, smaller values mean
+	// more resources will be made available to the unit's processes, larger values mean less resources
+	// will be made available. See
+	// <citerefentry><refentrytitle>setpriority</refentrytitle><manvolnum>2</manvolnum></citerefentry> for
+	// details.
+	Nice string `hcl:"nice,optional" systemd:"Nice"`
+	// Sets up a new file system namespace for executed processes. These options may be used to limit
+	// access a process has to the file system. Each setting takes a space-separated list of paths relative
+	// to the host's root directory (i.e. the system running the service manager). Note that if paths
+	// contain symlinks, they are resolved relative to the root directory set with
+	// RootDirectory=/RootImage=.
+	//
+	// Paths listed in ReadWritePaths= are accessible from within the namespace with the same access modes
+	// as from outside of it. Paths listed in ReadOnlyPaths= are accessible for reading only, writing will
+	// be refused even if the usual file access controls would permit this. Nest ReadWritePaths= inside of
+	// ReadOnlyPaths= in order to provide writable subdirectories within read-only directories. Use
+	// ReadWritePaths= in order to allow-list specific paths for write access if ProtectSystem=strict is
+	// used. Note that ReadWritePaths= cannot be used to gain write access to a file system whose
+	// superblock is mounted read-only. On Linux, for each mount point write access is granted only if the
+	// mount point itself and the file system superblock backing it are not marked read-only.
+	// ReadWritePaths= only controls the former, not the latter, hence a read-only file system superblock
+	// remains protected.
+	//
+	// Paths listed in InaccessiblePaths= will be made inaccessible for processes inside the namespace
+	// along with everything below them in the file system hierarchy. This may be more restrictive than
+	// desired, because it is not possible to nest ReadWritePaths=, ReadOnlyPaths=, BindPaths=, or
+	// BindReadOnlyPaths= inside it. For a more flexible option, see TemporaryFileSystem=.
+	//
+	// Content in paths listed in NoExecPaths= are not executable even if the usual file access controls
+	// would permit this. Nest ExecPaths= inside of NoExecPaths= in order to provide executable content
+	// within non-executable directories.
+	//
+	// Non-directory paths may be specified as well. These options may be specified more than once, in
+	// which case all paths listed will have limited access from within the namespace. If the empty string
+	// is assigned to this option, the specific list is reset, and all prior assignments have no effect.
+	//
+	// Paths in ReadWritePaths=, ReadOnlyPaths=, InaccessiblePaths=, ExecPaths= and NoExecPaths= may be
+	// prefixed with -, in which case they will be ignored when they do not exist. If prefixed with + the
+	// paths are taken relative to the root directory of the unit, as configured with
+	// RootDirectory=/RootImage=, instead of relative to the root directory of the host (see above). When
+	// combining - and + on the same path make sure to specify - first, and + second.
+	//
+	// Note that these settings will disconnect propagation of mounts from the unit's processes to the
+	// host. This means that this setting may not be used for services which shall be able to install mount
+	// points in the main mount namespace. For ReadWritePaths= and ReadOnlyPaths=, propagation in the other
+	// direction is not affected, i.e. mounts created on the host generally appear in the unit processes'
+	// namespace, and mounts removed on the host also disappear there too. In particular, note that mount
+	// propagation from host to unit will result in unmodified mounts to be created in the unit's
+	// namespace, i.e. writable mounts appearing on the host will be writable in the unit's namespace too,
+	// even when propagated below a path marked with ReadOnlyPaths=! Restricting access with these options
+	// hence does not extend to submounts of a directory that are created later on. This means the
+	// lock-down offered by that setting is not complete, and does not offer full protection.
+	//
+	// Note that the effect of these settings may be undone by privileged processes. In order to set up an
+	// effective sandboxed environment for a unit it is thus recommended to combine these settings with
+	// either CapabilityBoundingSet=~CAP_SYS_ADMIN or SystemCallFilter=~@mount.
+	//
+	// Please be extra careful when applying these options to API file systems (a list of them could be
+	// found in MountAPIVPS=), since they may be required for basic system functionalities. Moreover, /run/
+	// needs to be writable for setting up mount namespace and propagation.
+	//
+	// Simple allow-list example using these directives: <programlisting>[Service] ReadOnlyPaths=/
+	// ReadWritePaths=/var /run InaccessiblePaths=-/lost+found NoExecPaths=/ ExecPaths=/usr/sbin/my_daemon
+	// /usr/lib /usr/lib64 </programlisting>
+	//
+	NoExecPaths []string `hcl:"no_exec_paths,optional" systemd:"NoExecPaths"`
+	// Takes a boolean argument. If true, ensures that the service process and all its children can never
+	// gain new privileges through <function>execve()</function> (e.g. via setuid or setgid bits, or
+	// filesystem capabilities). This is the simplest and most effective way to ensure that a process and
+	// its children can never elevate privileges again. Defaults to false. In case the service will be run
+	// in a new mount namespace anyway and SELinux is disabled, all file systems are mounted with MS_NOSUID
+	// flag. Also see <ulink url="https://docs.kernel.org/userspace-api/no_new_privs.html">No New
+	// Privileges Flag</ulink>.
+	//
+	// Note that this setting only has an effect on the unit's processes themselves (or any processes
+	// directly or indirectly forked off them). It has no effect on processes potentially invoked on
+	// request of them through tools such as <citerefentry
+	// project='man-pages'><refentrytitle>at</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>crontab</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+	// <citerefentry><refentrytitle>systemd-run</refentrytitle><manvolnum>1</manvolnum></citerefentry>, or
+	// arbitrary IPC services.
+	//
+	NoNewPrivileges bool `hcl:"no_new_privileges,optional" systemd:"NoNewPrivileges"`
 	// Set the O_NONBLOCK flag for all file descriptors passed via socket-based activation. If true, all
 	// file descriptors >= 3 (i.e. all except stdin, stdout, stderr), excluding those passed in via the
 	// file descriptor storage logic (see FileDescriptorStoreMax= for details), will have the O_NONBLOCK
@@ -286,17 +1817,650 @@ type ServiceBlock struct {
 	// manager, otherwise this synchronization mechanism is unnecessary for attribution of notifications to
 	// the unit.
 	//
-	NotifyAccess         string `hcl:"notify_access,optional" systemd:"NotifyAccess"`
-	PermissionsStartOnly bool   `hcl:"permissions_start_only,optional" systemd:"PermissionsStartOnly"`
-	RebootArgument       string `hcl:"reboot_argument,optional" systemd:"RebootArgument"`
+	NotifyAccess string `hcl:"notify_access,optional" systemd:"NotifyAccess"`
+	// Configure the out-of-memory (OOM) killing policy for the kernel and the userspace OOM killer
+	// <citerefentry><refentrytitle>systemd-oomd.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>.
+	// On Linux, when memory becomes scarce to the point that the kernel has trouble allocating memory for
+	// itself, it might decide to kill a running process in order to free up memory and reduce memory
+	// pressure. Note that systemd-oomd.service is a more flexible solution that aims to prevent
+	// out-of-memory situations for the userspace too, not just the kernel, by attempting to terminate
+	// services earlier, before the kernel would have to act.
+	//
+	// This setting takes one of continue, stop or kill. If set to continue and a process in the unit is
+	// killed by the OOM killer, this is logged but the unit continues running. If set to stop the event is
+	// logged and the unit's processes are terminated cleanly by the service manager. If set to kill and
+	// one of the unit's processes is killed by the OOM killer the kernel is instructed to kill all
+	// remaining processes of the unit too, by setting the memory.oom.group attribute to 1; also see kernel
+	// page <ulink url="https://docs.kernel.org/admin-guide/cgroup-v2.html">Control Group v2</ulink>. In
+	// case of both stop and kill, the service ultimately ends up in the oom-kill failed state after which
+	// Restart= may apply.
+	//
+	// Defaults to the setting DefaultOOMPolicy= in
+	// <citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// is set to, except for units where Delegate= is turned on, where it defaults to continue.
+	//
+	// Use the OOMScoreAdjust= setting to configure whether processes of the unit shall be considered
+	// preferred or less preferred candidates for process termination by the Linux OOM killer logic. See
+	// <citerefentry><refentrytitle>systemd.exec</refentrytitle><manvolnum>5</manvolnum></citerefentry> for
+	// details.
+	//
+	// This setting also applies to
+	// <citerefentry><refentrytitle>systemd-oomd.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>.
+	// Similarly to the kernel OOM kills performed by the kernel, this setting determines the state of the
+	// unit after systemd-oomd kills a cgroup associated with it.
+	//
+	OOMPolicy string `hcl:"oom_policy,optional" systemd:"OOMPolicy"`
+	// Sets the adjustment value for the Linux kernel's Out-Of-Memory (OOM) killer score for executed
+	// processes. Takes an integer between -1000 (to disable OOM killing of processes of this unit) and
+	// 1000 (to make killing of processes of this unit under memory pressure very likely). See <ulink
+	// url="https://docs.kernel.org/filesystems/proc.html">The /proc Filesystem</ulink> for details. If not
+	// specified, defaults to the OOM score adjustment level of the service manager itself, which is
+	// normally at 0.
+	//
+	// Use the OOMPolicy= setting of service units to configure how the service manager shall react to the
+	// kernel OOM killer or systemd-oomd terminating a process of the service. See
+	// <citerefentry><refentrytitle>systemd.service</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// for details.
+	//
+	OOMScoreAdjust string `hcl:"oom_score_adjust,optional" systemd:"OOMScoreAdjust"`
+	// Takes an argument of the form path<optional>:fd-name:options</optional>, where: <itemizedlist>
+	// <listitem><simpara>path is a path to a file or an AF_UNIX socket in the file
+	// system;</simpara></listitem> <listitem><simpara>fd-name is a name that will be associated with the
+	// file descriptor; the name may contain any ASCII character, but must exclude control characters and
+	// ":", and must be at most 255 characters in length; it is optional and, if not provided, defaults to
+	// the file name;</simpara></listitem> <listitem><simpara>options is a comma-separated list of access
+	// options; possible values are read-only, append, truncate, graceful; if not specified, files will be
+	// opened in rw mode; if graceful is specified, errors during file/socket opening are ignored.
+	// Specifying the same option several times is treated as an error.</simpara></listitem>
+	// </itemizedlist> The file or socket is opened by the service manager and the file descriptor is
+	// passed to the service. If the path is a socket, we call <function>connect()</function> on it. See
+	// <citerefentry><refentrytitle>sd_listen_fds</refentrytitle><manvolnum>3</manvolnum></citerefentry>
+	// for more details on how to retrieve these file descriptors.
+	//
+	// This setting is useful to allow services to access files/sockets that they cannot access themselves
+	// (due to running in a separate mount namespace, not having privileges, ...).
+	//
+	// This setting can be specified multiple times, in which case all the specified paths are opened and
+	// the file descriptors passed to the service. If the empty string is assigned, the entire list of open
+	// files defined prior to this is reset.
+	//
+	OpenFile []string `hcl:"open_file,optional" systemd:"OpenFile"`
+	// Sets the PAM service name to set up a session as. If set, the executed process will be registered as
+	// a PAM session under the specified service name. This is only useful in conjunction with the User=
+	// setting, and is otherwise ignored. If not set, no PAM session will be opened for the executed
+	// processes. See <citerefentry
+	// project='man-pages'><refentrytitle>pam</refentrytitle><manvolnum>8</manvolnum></citerefentry> for
+	// details.
+	//
+	// Note that for each unit making use of this option a PAM session handler process will be maintained
+	// as part of the unit and stays around as long as the unit is active, to ensure that appropriate
+	// actions can be taken when the unit and hence the PAM session terminates. This process is named
+	// (sd-pam) and is an immediate child process of the unit's main process.
+	//
+	// Note that when this option is used for a unit it is very likely (depending on PAM configuration)
+	// that the main unit process will be migrated to its own session scope unit when it is activated. This
+	// process will hence be associated with two units: the unit it was originally started from (and for
+	// which PAMName= was configured), and the session scope unit. Any child processes of that process will
+	// however be associated with the session scope unit only. This has implications when used in
+	// combination with NotifyAccess=all, as these child processes will not be able to affect changes in
+	// the original unit through notification messages. These messages will be considered belonging to the
+	// session scope unit and not the original unit. It is hence not recommended to use PAMName= in
+	// combination with NotifyAccess=all.
+	//
+	// If a PAM module interactively requests input (a password or suchlike) it will be attempted to be
+	// read from a service credential (as configured via SetCredential=, ImportCredential= and related
+	// calls) under the name pam.authtok.pamservice, where pamservice is replaced by the PAM service name
+	// as configured with PAMName=. (Note that the credential remains accessible for the runtime of the
+	// service!) If no matching credential is set, the user is prompted for it interactively via the <ulink
+	// url="https://systemd.io/PASSWORD_AGENTS">Password Agent</ulink> logic.
+	//
+	PAMName string `hcl:"pam_name,optional" systemd:"PAMName"`
+	// Takes a path referring to the PID file of the service. Usage of this option is recommended for
+	// services where Type= is set to forking. The path specified typically points to a file below /run/.
+	// If a relative path is specified for system service, then it is hence prefixed with /run/, and
+	// prefixed with $XDG_RUNTIME_DIR if specified in a user service. The service manager will read the PID
+	// of the main process of the service from this file after start-up of the service. The service manager
+	// will not write to the file configured here, although it will remove the file after the service has
+	// shut down if it still exists. The PID file does not need to be owned by a privileged user, but if it
+	// is owned by an unprivileged user additional safety restrictions are enforced: the file may not be a
+	// symlink to a file owned by a different user (neither directly nor indirectly), and the PID file must
+	// refer to a process already belonging to the service.
+	//
+	// Note that PID files should be avoided in modern projects. Use Type=notify, Type=notify-reload or
+	// Type=simple where possible, which does not require use of PID files to determine the main process of
+	// a service and avoids needless forking.
+	//
+	PIDFile string `hcl:"pid_file,optional" systemd:"PIDFile"`
+	// Pass environment variables set for the system service manager to executed processes. Takes a
+	// space-separated list of variable names. This option may be specified more than once, in which case
+	// all listed variables will be passed. If the empty string is assigned to this option, the list of
+	// environment variables to pass is reset, all prior assignments have no effect. Variables specified
+	// that are not set for the system manager will not be passed and will be silently ignored. Note that
+	// this option is only relevant for the system service manager, as system services by default do not
+	// automatically inherit any environment variables set for the service manager itself. However, in case
+	// of the user service manager all environment variables are passed to the executed processes anyway,
+	// hence this option is without effect for the user service manager.
+	//
+	// Variables set for invoked processes due to this setting are subject to being overridden by those
+	// configured with Environment= or EnvironmentFile=.
+	//
+	// Example: <programlisting>PassEnvironment=VAR1 VAR2 VAR3</programlisting> passes three variables
+	// VAR1, VAR2, VAR3 with the values set for those variables in PID1.
+	//
+	// See <citerefentry
+	// project='man-pages'><refentrytitle>environ</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// for details about environment variables.
+	//
+	PassEnvironment      []string `hcl:"pass_environment,optional" systemd:"PassEnvironment"`
+	PermissionsStartOnly bool     `hcl:"permissions_start_only,optional" systemd:"PermissionsStartOnly"`
+	// Controls which kernel architecture <citerefentry
+	// project='man-pages'><refentrytitle>uname</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// shall report, when invoked by unit processes. Takes one of the architecture identifiers arm64,
+	// arm64-be, arm, arm-be, x86, x86-64, ppc, ppc-le, ppc64, ppc64-le, s390 or s390x. Which personality
+	// architectures are supported depends on the kernel's native architecture. Usually the 64-bit versions
+	// of the various system architectures support their immediate 32-bit personality architecture
+	// counterpart, but no others. For example, x86-64 systems support the x86-64 and x86 personalities but
+	// no others. The personality feature is useful when running 32-bit services on a 64-bit host system.
+	// If not specified, the personality is left unmodified and thus reflects the personality of the host
+	// system's kernel. This option is not useful on architectures for which only one native word width was
+	// ever available, such as m68k (32-bit only) or alpha (64-bit only).
+	Personality string `hcl:"personality,optional" systemd:"Personality"`
+	// Takes a boolean argument. If set, mount a private instance of the BPF filesystem on /sys/fs/bpf/,
+	// effectively hiding the host bpffs which contains information about loaded programs and maps.
+	// Otherwise, if ProtectKernelTunables= is set, the instance from the host is inherited but mounted
+	// read-only. Defaults to false.
+	//
+	// This can be used together with the bpffs delegate feature to choose what BPF functions are available
+	// to the unit's processes. When mounting the BPF filesystem with the fsopen() API, four mount options
+	// can be specified to set a list of BPF commands, maps, programs and attachment types that are allowed
+	// to be used. Processes needs to get a file descriptor for the bpffs mountpoint and use that to get a
+	// token which will enable for that user namespace the BPF functionalities chosen upon bpffs mount. A
+	// more detailed explanation of the feature can be found in this <ulink
+	// url="https://lwn.net/Articles/947173/">LWN post</ulink>.
+	//
+	PrivateBPF string `hcl:"private_bpf,optional" systemd:"PrivateBPF"`
+	// Takes a boolean argument. If true, sets up a new /dev/ mount for the executed processes and only
+	// adds API pseudo devices such as /dev/null, /dev/zero or /dev/random (as well as the pseudo TTY
+	// subsystem) to it, but no physical devices such as /dev/sda, system memory /dev/mem, system ports
+	// /dev/port and others. This is useful to turn off physical device access by the executed process.
+	// Defaults to false.
+	//
+	// Enabling this option will install a system call filter to block low-level I/O system calls that are
+	// grouped in the @raw-io set, remove CAP_MKNOD and CAP_SYS_RAWIO from the capability bounding set for
+	// the unit, and set DevicePolicy=closed (see
+	// <citerefentry><refentrytitle>systemd.resource-control</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// for details). Note that using this setting will disconnect propagation of mounts from the service to
+	// the host (propagation in the opposite direction continues to work). This means that this setting may
+	// not be used for services which shall be able to install mount points in the main mount namespace.
+	// The new /dev/ will be mounted read-only and 'noexec'. The latter may break old programs which try to
+	// set up executable memory by using
+	// <citerefentry><refentrytitle>mmap</refentrytitle><manvolnum>2</manvolnum></citerefentry> of
+	// /dev/zero instead of using MAP_ANON. For this setting the same restrictions regarding mount
+	// propagation and privileges apply as for ReadOnlyPaths= and related calls, see above.
+	//
+	// Note that the implementation of this setting might be impossible (for example if mount namespaces
+	// are not available), and the unit should be written in a way that does not solely rely on this
+	// setting for security.
+	//
+	// When access to some but not all devices must be possible, the DeviceAllow= setting might be used
+	// instead. See
+	// <citerefentry><refentrytitle>systemd.resource-control</refentrytitle><manvolnum>5</manvolnum></citerefentry>.
+	//
+	PrivateDevices bool `hcl:"private_devices,optional" systemd:"PrivateDevices"`
+	// Takes a boolean argument. If true, sets up a new IPC namespace for the executed processes. Each IPC
+	// namespace has its own set of System V IPC identifiers and its own POSIX message queue file system.
+	// This is useful to avoid name clash of IPC identifiers. Defaults to false. It is possible to run two
+	// or more units within the same private IPC namespace by using the JoinsNamespaceOf= directive, see
+	// <citerefentry><refentrytitle>systemd.unit</refentrytitle><manvolnum>5</manvolnum></citerefentry> for
+	// details.
+	//
+	// Note that IPC namespacing does not have an effect on AF_UNIX sockets, which are the most common form
+	// of IPC used on Linux. Instead, AF_UNIX sockets in the file system are subject to mount namespacing,
+	// and those in the abstract namespace are subject to network namespacing. IPC namespacing only has an
+	// effect on SysV IPC (which is mostly legacy) as well as POSIX message queues (for which
+	// AF_UNIX/SOCK_SEQPACKET sockets are typically a better replacement). IPC namespacing also has no
+	// effect on POSIX shared memory (which is subject to mount namespacing) either. See <citerefentry
+	// project='man-pages'><refentrytitle>ipc_namespaces</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// for the details.
+	//
+	// Note that the implementation of this setting might be impossible (for example if IPC namespaces are
+	// not available), and the unit should be written in a way that does not solely rely on this setting
+	// for security.
+	//
+	PrivateIPC bool `hcl:"private_ipc,optional" systemd:"PrivateIPC"`
+	// Takes a boolean parameter. If set, the processes of this unit will be run in their own private file
+	// system (mount) namespace with all mount propagation from the processes towards the host's main file
+	// system namespace turned off. This means any file system mount points established or removed by the
+	// unit's processes will be private to them and not be visible to the host. However, file system mount
+	// points established or removed on the host will be propagated to the unit's processes. See
+	// <citerefentry
+	// project='man-pages'><refentrytitle>mount_namespaces</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// for details on file system namespaces. Defaults to off.
+	//
+	// When turned on, this executes three operations for each invoked process: a new CLONE_NEWNS namespace
+	// is created, after which all existing mounts are remounted to MS_SLAVE to disable propagation from
+	// the unit's processes to the host (but leaving propagation in the opposite direction in effect).
+	// Finally, the mounts are remounted again to the propagation mode configured with MountFlags=, see
+	// below.
+	//
+	// File system namespaces are set up individually for each process forked off by the service manager.
+	// Mounts established in the namespace of the process created by ExecStartPre= will hence be cleaned up
+	// automatically as soon as that process exits and will not be available to subsequent processes forked
+	// off for ExecStart= (and similar applies to the various other commands configured for units).
+	// Similarly, JoinsNamespaceOf= does not permit sharing kernel mount namespaces between units, it only
+	// enables sharing of the /tmp/ and /var/tmp/ directories.
+	//
+	// Other file system namespace unit settings — PrivateTmp=, PrivateDevices=, ProtectSystem=,
+	// ProtectHome=, ReadOnlyPaths=, InaccessiblePaths=, ReadWritePaths=, BindPaths=, BindReadOnlyPaths=,
+	// … — also enable file system namespacing in a fashion equivalent to this option. Hence it is
+	// primarily useful to explicitly request this behaviour if none of the other settings are used.
+	//
+	PrivateMounts bool `hcl:"private_mounts,optional" systemd:"PrivateMounts"`
+	// Takes a boolean argument. If true, sets up a new network namespace for the executed processes and
+	// configures only the loopback network device lo inside it. No other network devices will be available
+	// to the executed process. This is useful to turn off network access by the executed process. Defaults
+	// to false. It is possible to run two or more units within the same private network namespace by using
+	// the JoinsNamespaceOf= directive, see
+	// <citerefentry><refentrytitle>systemd.unit</refentrytitle><manvolnum>5</manvolnum></citerefentry> for
+	// details. Note that this option will disconnect all socket families from the host, including
+	// AF_NETLINK and AF_UNIX. Effectively, for AF_NETLINK this means that device configuration events
+	// received from
+	// <citerefentry><refentrytitle>systemd-udevd.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>
+	// are not delivered to the unit's processes. And for AF_UNIX this has the effect that AF_UNIX sockets
+	// in the abstract socket namespace of the host will become unavailable to the unit's processes
+	// (however, those located in the file system will continue to be accessible).
+	//
+	// Note that the implementation of this setting might be impossible (for example if network namespaces
+	// are not available), and the unit should be written in a way that does not solely rely on this
+	// setting for security.
+	//
+	// When this option is enabled, PrivateMounts= is implied unless it is explicitly disabled, and /sys
+	// will be remounted to associate it with the new network namespace.
+	//
+	// When this option is used on a socket unit any sockets bound on behalf of this unit will be bound
+	// within a private network namespace. This may be combined with JoinsNamespaceOf= to listen on sockets
+	// inside of network namespaces of other services.
+	//
+	PrivateNetwork bool `hcl:"private_network,optional" systemd:"PrivateNetwork"`
+	// Takes a boolean argument. Defaults to false. If enabled, sets up a new PID namespace for the
+	// executed processes. Each executed process is now PID 1 - the init process - in the new namespace.
+	// /proc/ is mounted such that only processes in the PID namespace are visible. If PrivatePIDs= is set,
+	// MountAPIVFS=yes is implied.
+	//
+	// PrivatePIDs= is only supported for service units. This setting is not supported with Type=forking
+	// since the kernel will kill all processes in the PID namespace if the init process terminates.
+	//
+	// This setting will be ignored if the kernel does not support PID namespaces.
+	//
+	// Note unprivileged user services (i.e. a service run by the per-user instance of the service manager)
+	// will fail with PrivatePIDs=yes if /proc/ is masked (i.e. /proc/kmsg is over-mounted with tmpfs like
+	// <citerefentry><refentrytitle>systemd-nspawn</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+	// does). This is due to a kernel restriction not allowing unprivileged user namespaces to mount a less
+	// restrictive instance of /proc/.
+	//
+	PrivatePIDs string `hcl:"private_pi_ds,optional" systemd:"PrivatePIDs"`
+	PrivateTmp  string `hcl:"private_tmp,optional" systemd:"PrivateTmp"`
+	// Takes a boolean argument or one of self, identity, full or managed. Defaults to false. If enabled,
+	// sets up a new user namespace for the executed processes and configures a user and group mapping. If
+	// set to a true value or self, a minimal user and group mapping is configured that maps the root user
+	// and group as well as the unit's own user and group to themselves and everything else to the nobody
+	// user and group. This is useful to securely detach the user and group databases used by the unit from
+	// the rest of the system, and thus to create an effective sandbox environment. All files, directories,
+	// processes, IPC objects and other resources owned by users/groups not equaling root or the unit's own
+	// will stay visible from within the unit but appear owned by the nobody user and group.
+	//
+	// If the parameter is identity, user namespacing is set up with an identity mapping for the first
+	// 65536 UIDs/GIDs. Any UIDs/GIDs above 65536 will be mapped to the nobody user and group,
+	// respectively. While this does not provide UID/GID isolation, since all UIDs/GIDs are chosen
+	// identically it does provide process capability isolation, and hence is often a good choice if proper
+	// user namespacing with distinct UID maps is not appropriate.
+	//
+	// If the parameter is full, user namespacing is set up with an identity mapping for all UIDs/GIDs. In
+	// addition, for system services, full allows the unit to call <function>setgroups()</function> system
+	// calls (by setting /proc/pid/setgroups to allow). Similar to identity, this does not provide UID/GID
+	// isolation, but it does provide process capability isolation. If this mode is enabled, all unit
+	// processes are run without privileges in the host user namespace (regardless of whether the unit's
+	// own user/group is root or not). Specifically this means that the process will have zero process
+	// capabilities on the host's user namespace, but full capabilities within the service's user
+	// namespace. Settings such as CapabilityBoundingSet= will affect only the latter, and there's no way
+	// to acquire additional capabilities in the host's user namespace.
+	//
+	// If the parameter is managed a transient, dynamically allocated range of 65536 UIDs/GIDs is allocated
+	// for the unit, and a UID/GID mapping is assigned to the unit's process so the UID/GID 0 from inside
+	// the unit maps to the first UID/GID of the allocated mapping. Note that in this mode the UID/GID the
+	// service process will run as is different depending if looking from the host side (where it will be a
+	// high, dynamically assigned UID) or from inside the unit (where it will be 0). Also note that this
+	// mode will enable file system UID mapping for the file systems this service accesses, mapping the
+	// "foreign" UID range on disk to the selected dynamic UID range at runtime.
+	//
+	// When this setting is set up by a per-user instance of the service manager, the mapping of the root
+	// user and group to itself is omitted (unless the user manager is root). Additionally, in the per-user
+	// instance manager case, the user namespace will be set up before most other namespaces. This means
+	// that combining PrivateUsers=true with other namespaces will enable use of features not normally
+	// supported by the per-user instances of the service manager.
+	//
+	// This setting is particularly useful in conjunction with RootDirectory=/RootImage=, as the need to
+	// synchronize the user and group databases in the root directory and on the host is reduced, as the
+	// only users and groups who need to be matched are root, nobody and the unit's own user and group.
+	//
+	PrivateUsers string `hcl:"private_users,optional" systemd:"PrivateUsers"`
+	// Takes one of all (the default) and pid. If pid, all files and directories not directly associated
+	// with process management and introspection are made invisible in the /proc/ file system configured
+	// for the unit's processes. This controls the subset= mount option of the procfs instance for the
+	// unit. For further details see <ulink
+	// url="https://docs.kernel.org/filesystems/proc.html#mount-options">The /proc Filesystem</ulink>. Note
+	// that Linux exposes various kernel APIs via /proc/, which are made unavailable with this setting.
+	// Since these APIs are used frequently this option is useful only in a few, specific cases, and is not
+	// suitable for most non-trivial programs.
+	//
+	// Much like ProtectProc= above, this is implemented via file system mount namespacing, and hence the
+	// same restrictions apply: it is only available to system services, it disables mount propagation to
+	// the host mount table, and it implies MountAPIVFS=. Also, like ProtectProc= this setting is
+	// gracefully disabled if the used kernel does not support the subset= mount option of procfs.
+	//
+	ProcSubset string `hcl:"proc_subset,optional" systemd:"ProcSubset"`
+	// Takes a boolean argument. If set, writes to the hardware clock or system clock will be denied.
+	// Defaults to off. Enabling this option removes CAP_SYS_TIME and CAP_WAKE_ALARM from the capability
+	// bounding set for this unit, installs a system call filter to block calls that can set the clock, and
+	// DeviceAllow=char-rtc r is implied. Note that the system calls are blocked altogether, the filter
+	// does not take into account that some of the calls can be used to read the clock state with some
+	// parameter combinations. Effectively, /dev/rtc0, /dev/rtc1, etc. are made read-only to the service.
+	// See
+	// <citerefentry><refentrytitle>systemd.resource-control</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// for the details about DeviceAllow=.
+	//
+	// It is recommended to turn this on for most services that do not need modify the clock or check its
+	// state.
+	//
+	ProtectClock bool `hcl:"protect_clock,optional" systemd:"ProtectClock"`
+	// Takes a boolean argument or the special values private or strict. If true, the Linux Control Groups
+	// (<citerefentry project='man-pages'>
+	// <refentrytitle>cgroups</refentrytitle><manvolnum>7</manvolnum></citerefentry>) hierarchies
+	// accessible through /sys/fs/cgroup/ will be made read-only to all processes of the unit. If set to
+	// private, the unit will run in a cgroup namespace with a private writable mount of /sys/fs/cgroup/.
+	// If set to strict, the unit will run in a cgroup namespace with a private read-only mount of
+	// /sys/fs/cgroup/. Defaults to off. If ProtectControlGroups= is set, MountAPIVFS=yes is implied. Note
+	// private and strict are downgraded to false and true respectively unless the system is using the
+	// unified control group hierarchy and the kernel supports cgroup namespaces.
+	//
+	// Except for container managers no services should require write access to the control groups
+	// hierarchies; it is hence recommended to set ProtectControlGroups= to true or strict for most
+	// services. For this setting the same restrictions regarding mount propagation and privileges apply as
+	// for ReadOnlyPaths= and related settings, see above.
+	//
+	ProtectControlGroups string `hcl:"protect_control_groups,optional" systemd:"ProtectControlGroups"`
+	// Takes a boolean argument or the special values read-only or tmpfs. If true, the directories /home/,
+	// /root, and /run/user are made inaccessible and empty for processes invoked by this unit. If set to
+	// read-only, the three directories are made read-only instead. If set to tmpfs, temporary file systems
+	// are mounted on the three directories in read-only mode. The value tmpfs is useful to hide home
+	// directories not relevant to the processes invoked by the unit, while still allowing necessary
+	// directories to be made visible when listed in BindPaths= or BindReadOnlyPaths=.
+	//
+	// Setting this to yes is mostly equivalent to setting the three directories in InaccessiblePaths=.
+	// Similarly, read-only is mostly equivalent to ReadOnlyPaths=, and tmpfs is mostly equivalent to
+	// TemporaryFileSystem= with :ro.
+	//
+	// It is recommended to enable this setting for all long-running services (in particular network-facing
+	// ones), to ensure they cannot get access to private user data, unless the services actually require
+	// access to the user's private data. This setting is implied if DynamicUser= is set. This setting
+	// cannot ensure protection in all cases. In general it has the same limitations as ReadOnlyPaths=, see
+	// below.
+	//
+	// Note that this setting provides no protection if home directories are placed at a non-standard
+	// location, i.e. outside of the hierarchies listed above.
+	//
+	ProtectHome string `hcl:"protect_home,optional" systemd:"ProtectHome"`
+	// Takes a boolean argument or private. If enabled, sets up a new UTS namespace for the executed
+	// processes. If enabled, a hostname can be optionally specified following a colon (e.g. yes:foo or
+	// private:host.example.com), and the hostname is set in the new UTS namespace for the unit. If set to
+	// a true value, changing hostname or domainname via <function>sethostname()</function> and
+	// <function>setdomainname()</function> system calls is prevented. If set to private, changing hostname
+	// or domainname is allowed but only affects the unit's UTS namespace. Defaults to off.
+	//
+	// Note that the implementation of this setting might be impossible (for example if UTS namespaces are
+	// not available), and the unit should be written in a way that does not solely rely on this setting
+	// for security.
+	//
+	// Note that when this option is enabled for a service hostname changes no longer propagate from the
+	// system into the service, it is hence not suitable for services that need to take notice of system
+	// hostname changes dynamically.
+	//
+	// Note that this option does not prevent changing system hostname via hostnamectl. However, User= and
+	// Group= may be used to run as an unprivileged user to disallow changing system hostname. See
+	// <function>SetHostname()</function> in <citerefentry
+	// project="man-pages"><refentrytitle>org.freedesktop.hostname1</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// for more details.
+	//
+	ProtectHostname string `hcl:"protect_hostname,optional" systemd:"ProtectHostname"`
+	// Takes a boolean argument. If true, access to the kernel log ring buffer will be denied. It is
+	// recommended to turn this on for most services that do not need to read from or write to the kernel
+	// log ring buffer. Enabling this option removes CAP_SYSLOG from the capability bounding set for this
+	// unit, and installs a system call filter to block the <citerefentry
+	// project='man-pages'><refentrytitle>syslog</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// system call (not to be confused with the libc API <citerefentry
+	// project='man-pages'><refentrytitle>syslog</refentrytitle><manvolnum>3</manvolnum></citerefentry> for
+	// userspace logging). The kernel exposes its log buffer to userspace via /dev/kmsg and /proc/kmsg. If
+	// enabled, these are made inaccessible to all the processes in the unit.
+	ProtectKernelLogs bool `hcl:"protect_kernel_logs,optional" systemd:"ProtectKernelLogs"`
+	// Takes a boolean argument. If true, explicit module loading will be denied. This allows module load
+	// and unload operations to be turned off on modular kernels. It is recommended to turn this on for
+	// most services that do not need special file systems or extra kernel modules to work. Defaults to
+	// off. Enabling this option removes CAP_SYS_MODULE from the capability bounding set for the unit, and
+	// installs a system call filter to block module system calls, also /usr/lib/modules is made
+	// inaccessible. For this setting the same restrictions regarding mount propagation and privileges
+	// apply as for ReadOnlyPaths= and related calls, see above. Note that limited automatic module loading
+	// due to user configuration or kernel mapping tables might still happen as side effect of requested
+	// user operations, both privileged and unprivileged. To disable module auto-load feature please see
+	// <citerefentry><refentrytitle>sysctl.d</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// kernel.modules_disabled mechanism and /proc/sys/kernel/modules_disabled documentation.
+	ProtectKernelModules bool `hcl:"protect_kernel_modules,optional" systemd:"ProtectKernelModules"`
+	// Takes a boolean argument. If true, kernel variables accessible through /proc/sys/, /sys/,
+	// /proc/sysrq-trigger, /proc/latency_stats, /proc/acpi, /proc/timer_stats, /proc/fs and /proc/irq will
+	// be made read-only and /proc/kallsyms as well as /proc/kcore will be inaccessible to all processes of
+	// the unit. Usually, tunable kernel variables should be initialized only at boot-time, for example
+	// with the
+	// <citerefentry><refentrytitle>sysctl.d</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// mechanism. Few services need to write to these at runtime; it is hence recommended to turn this on
+	// for most services. For this setting the same restrictions regarding mount propagation and privileges
+	// apply as for ReadOnlyPaths= and related calls, see above. Defaults to off. Note that this option
+	// does not prevent indirect changes to kernel tunables affected by IPC calls to other processes.
+	// However, InaccessiblePaths= may be used to make relevant IPC file system objects inaccessible. If
+	// ProtectKernelTunables= is set, MountAPIVFS=yes is implied.
+	ProtectKernelTunables bool `hcl:"protect_kernel_tunables,optional" systemd:"ProtectKernelTunables"`
+	// Takes one of noaccess, invisible, ptraceable or default (which it defaults to). When set, this
+	// controls the hidepid= mount option of the procfs instance for the unit that controls which
+	// directories with process metainformation (/proc/PID) are visible and accessible: when set to
+	// noaccess the ability to access most of other users' process metadata in /proc/ is taken away for
+	// processes of the service. When set to invisible processes owned by other users are hidden from
+	// /proc/. If ptraceable all processes that cannot be <function>ptrace()</function>'ed by a process are
+	// hidden to it. If default no restrictions on /proc/ access or visibility are made. For further
+	// details see <ulink url="https://docs.kernel.org/filesystems/proc.html#mount-options">The /proc
+	// Filesystem</ulink>. It is generally recommended to run most system services with this option set to
+	// invisible. This option is implemented via file system namespacing, and thus cannot be used with
+	// services that shall be able to install mount points in the host file system hierarchy. Note that the
+	// root user is unaffected by this option, so to be effective it has to be used together with User= or
+	// DynamicUser=yes, and also without the CAP_SYS_PTRACE capability, which also allows a process to
+	// bypass this feature. It cannot be used for services that need to access metainformation about other
+	// users' processes. This option implies MountAPIVFS=.
+	//
+	// If the kernel does not support per-mount point hidepid= mount options this setting remains without
+	// effect, and the unit's processes will be able to access and see other process as if the option was
+	// not used.
+	//
+	ProtectProc string `hcl:"protect_proc,optional" systemd:"ProtectProc"`
+	// Takes a boolean argument or the special values full or strict. If true, mounts the /usr/ and the
+	// boot loader directories (/boot and /efi) read-only for processes invoked by this unit. If set to
+	// full, the /etc/ directory is mounted read-only, too. If set to strict the entire file system
+	// hierarchy is mounted read-only, except for the API file system subtrees /dev/, /proc/ and /sys/
+	// (protect these directories using PrivateDevices=, ProtectKernelTunables=, ProtectControlGroups=).
+	// This setting ensures that any modification of the vendor-supplied operating system (and optionally
+	// its configuration, and local mounts) is prohibited for the service. It is recommended to enable this
+	// setting for all long-running services, unless they are involved with system updates or need to
+	// modify the operating system in other ways. If this option is used, ReadWritePaths= may be used to
+	// exclude specific directories from being made read-only. Similar, StateDirectory=, LogsDirectory=,
+	// … and related directory settings (see below) also exclude the specific directories from the effect
+	// of ProtectSystem=. This setting is implied if DynamicUser= is set. This setting cannot ensure
+	// protection in all cases. In general it has the same limitations as ReadOnlyPaths=, see below.
+	// Defaults to off.
+	//
+	// Note that if ProtectSystem= is set to strict and PrivateTmp= is enabled, then /tmp/ and /var/tmp/
+	// will be writable.
+	//
+	ProtectSystem       string   `hcl:"protect_system,optional" systemd:"ProtectSystem"`
+	ReadOnlyDirectories []string `hcl:"read_only_directories,optional" systemd:"ReadOnlyDirectories"`
+	// Sets up a new file system namespace for executed processes. These options may be used to limit
+	// access a process has to the file system. Each setting takes a space-separated list of paths relative
+	// to the host's root directory (i.e. the system running the service manager). Note that if paths
+	// contain symlinks, they are resolved relative to the root directory set with
+	// RootDirectory=/RootImage=.
+	//
+	// Paths listed in ReadWritePaths= are accessible from within the namespace with the same access modes
+	// as from outside of it. Paths listed in ReadOnlyPaths= are accessible for reading only, writing will
+	// be refused even if the usual file access controls would permit this. Nest ReadWritePaths= inside of
+	// ReadOnlyPaths= in order to provide writable subdirectories within read-only directories. Use
+	// ReadWritePaths= in order to allow-list specific paths for write access if ProtectSystem=strict is
+	// used. Note that ReadWritePaths= cannot be used to gain write access to a file system whose
+	// superblock is mounted read-only. On Linux, for each mount point write access is granted only if the
+	// mount point itself and the file system superblock backing it are not marked read-only.
+	// ReadWritePaths= only controls the former, not the latter, hence a read-only file system superblock
+	// remains protected.
+	//
+	// Paths listed in InaccessiblePaths= will be made inaccessible for processes inside the namespace
+	// along with everything below them in the file system hierarchy. This may be more restrictive than
+	// desired, because it is not possible to nest ReadWritePaths=, ReadOnlyPaths=, BindPaths=, or
+	// BindReadOnlyPaths= inside it. For a more flexible option, see TemporaryFileSystem=.
+	//
+	// Content in paths listed in NoExecPaths= are not executable even if the usual file access controls
+	// would permit this. Nest ExecPaths= inside of NoExecPaths= in order to provide executable content
+	// within non-executable directories.
+	//
+	// Non-directory paths may be specified as well. These options may be specified more than once, in
+	// which case all paths listed will have limited access from within the namespace. If the empty string
+	// is assigned to this option, the specific list is reset, and all prior assignments have no effect.
+	//
+	// Paths in ReadWritePaths=, ReadOnlyPaths=, InaccessiblePaths=, ExecPaths= and NoExecPaths= may be
+	// prefixed with -, in which case they will be ignored when they do not exist. If prefixed with + the
+	// paths are taken relative to the root directory of the unit, as configured with
+	// RootDirectory=/RootImage=, instead of relative to the root directory of the host (see above). When
+	// combining - and + on the same path make sure to specify - first, and + second.
+	//
+	// Note that these settings will disconnect propagation of mounts from the unit's processes to the
+	// host. This means that this setting may not be used for services which shall be able to install mount
+	// points in the main mount namespace. For ReadWritePaths= and ReadOnlyPaths=, propagation in the other
+	// direction is not affected, i.e. mounts created on the host generally appear in the unit processes'
+	// namespace, and mounts removed on the host also disappear there too. In particular, note that mount
+	// propagation from host to unit will result in unmodified mounts to be created in the unit's
+	// namespace, i.e. writable mounts appearing on the host will be writable in the unit's namespace too,
+	// even when propagated below a path marked with ReadOnlyPaths=! Restricting access with these options
+	// hence does not extend to submounts of a directory that are created later on. This means the
+	// lock-down offered by that setting is not complete, and does not offer full protection.
+	//
+	// Note that the effect of these settings may be undone by privileged processes. In order to set up an
+	// effective sandboxed environment for a unit it is thus recommended to combine these settings with
+	// either CapabilityBoundingSet=~CAP_SYS_ADMIN or SystemCallFilter=~@mount.
+	//
+	// Please be extra careful when applying these options to API file systems (a list of them could be
+	// found in MountAPIVPS=), since they may be required for basic system functionalities. Moreover, /run/
+	// needs to be writable for setting up mount namespace and propagation.
+	//
+	// Simple allow-list example using these directives: <programlisting>[Service] ReadOnlyPaths=/
+	// ReadWritePaths=/var /run InaccessiblePaths=-/lost+found NoExecPaths=/ ExecPaths=/usr/sbin/my_daemon
+	// /usr/lib /usr/lib64 </programlisting>
+	//
+	ReadOnlyPaths        []string `hcl:"read_only_paths,optional" systemd:"ReadOnlyPaths"`
+	ReadWriteDirectories []string `hcl:"read_write_directories,optional" systemd:"ReadWriteDirectories"`
+	// Sets up a new file system namespace for executed processes. These options may be used to limit
+	// access a process has to the file system. Each setting takes a space-separated list of paths relative
+	// to the host's root directory (i.e. the system running the service manager). Note that if paths
+	// contain symlinks, they are resolved relative to the root directory set with
+	// RootDirectory=/RootImage=.
+	//
+	// Paths listed in ReadWritePaths= are accessible from within the namespace with the same access modes
+	// as from outside of it. Paths listed in ReadOnlyPaths= are accessible for reading only, writing will
+	// be refused even if the usual file access controls would permit this. Nest ReadWritePaths= inside of
+	// ReadOnlyPaths= in order to provide writable subdirectories within read-only directories. Use
+	// ReadWritePaths= in order to allow-list specific paths for write access if ProtectSystem=strict is
+	// used. Note that ReadWritePaths= cannot be used to gain write access to a file system whose
+	// superblock is mounted read-only. On Linux, for each mount point write access is granted only if the
+	// mount point itself and the file system superblock backing it are not marked read-only.
+	// ReadWritePaths= only controls the former, not the latter, hence a read-only file system superblock
+	// remains protected.
+	//
+	// Paths listed in InaccessiblePaths= will be made inaccessible for processes inside the namespace
+	// along with everything below them in the file system hierarchy. This may be more restrictive than
+	// desired, because it is not possible to nest ReadWritePaths=, ReadOnlyPaths=, BindPaths=, or
+	// BindReadOnlyPaths= inside it. For a more flexible option, see TemporaryFileSystem=.
+	//
+	// Content in paths listed in NoExecPaths= are not executable even if the usual file access controls
+	// would permit this. Nest ExecPaths= inside of NoExecPaths= in order to provide executable content
+	// within non-executable directories.
+	//
+	// Non-directory paths may be specified as well. These options may be specified more than once, in
+	// which case all paths listed will have limited access from within the namespace. If the empty string
+	// is assigned to this option, the specific list is reset, and all prior assignments have no effect.
+	//
+	// Paths in ReadWritePaths=, ReadOnlyPaths=, InaccessiblePaths=, ExecPaths= and NoExecPaths= may be
+	// prefixed with -, in which case they will be ignored when they do not exist. If prefixed with + the
+	// paths are taken relative to the root directory of the unit, as configured with
+	// RootDirectory=/RootImage=, instead of relative to the root directory of the host (see above). When
+	// combining - and + on the same path make sure to specify - first, and + second.
+	//
+	// Note that these settings will disconnect propagation of mounts from the unit's processes to the
+	// host. This means that this setting may not be used for services which shall be able to install mount
+	// points in the main mount namespace. For ReadWritePaths= and ReadOnlyPaths=, propagation in the other
+	// direction is not affected, i.e. mounts created on the host generally appear in the unit processes'
+	// namespace, and mounts removed on the host also disappear there too. In particular, note that mount
+	// propagation from host to unit will result in unmodified mounts to be created in the unit's
+	// namespace, i.e. writable mounts appearing on the host will be writable in the unit's namespace too,
+	// even when propagated below a path marked with ReadOnlyPaths=! Restricting access with these options
+	// hence does not extend to submounts of a directory that are created later on. This means the
+	// lock-down offered by that setting is not complete, and does not offer full protection.
+	//
+	// Note that the effect of these settings may be undone by privileged processes. In order to set up an
+	// effective sandboxed environment for a unit it is thus recommended to combine these settings with
+	// either CapabilityBoundingSet=~CAP_SYS_ADMIN or SystemCallFilter=~@mount.
+	//
+	// Please be extra careful when applying these options to API file systems (a list of them could be
+	// found in MountAPIVPS=), since they may be required for basic system functionalities. Moreover, /run/
+	// needs to be writable for setting up mount namespace and propagation.
+	//
+	// Simple allow-list example using these directives: <programlisting>[Service] ReadOnlyPaths=/
+	// ReadWritePaths=/var /run InaccessiblePaths=-/lost+found NoExecPaths=/ ExecPaths=/usr/sbin/my_daemon
+	// /usr/lib /usr/lib64 </programlisting>
+	//
+	ReadWritePaths []string `hcl:"read_write_paths,optional" systemd:"ReadWritePaths"`
+	RebootArgument string   `hcl:"reboot_argument,optional" systemd:"RebootArgument"`
+	// Takes a boolean argument, or a list of resources defined in
+	// <citerefentry><refentrytitle>systemd.exec</refentrytitle><manvolnum>5</manvolnum></citerefentry>.
+	// Possible values are extensions and credentials, separated by space. Prepending the list with a
+	// single tilde character (~) inverts the effect. Defaults to extensions. An empty assignment resets
+	// the list to default. If enabled, the corresponding resources (ExtensionImages=/ExtensionDirectories=
+	// for extensions and LoadCredential=/ImportCredential=/ SetCredential= (along with their Encrypted
+	// counterparts) for credentials) will be refreshed on service reload. If yes, all resources listed
+	// above that are used by the service shall be refreshed.
+	//
+	// Specially, if this option is set explicitly, and the respective resources are in use, the service
+	// may be reloaded without any actual reload mechanism (ExecReload= or Type=notify-reload) for
+	// notifying the main process, in which case the reload is considered complete immediately after
+	// refreshing.
+	//
+	RefreshOnReload string `hcl:"refresh_on_reload,optional" systemd:"RefreshOnReload"`
 	// Configures the UNIX process signal to send to the service's main process when asked to reload the
 	// service's configuration. Defaults to SIGHUP. This option has no effect unless Type=notify-reload is
 	// used, see above.
 	ReloadSignal syscall.Signal `unitd:"reload_signal,optional" systemd:"ReloadSignal"`
 	// Takes a boolean value that specifies whether the service shall be considered active even when all
 	// its processes exited. Defaults to no.
-	RemainAfterExit bool   `hcl:"remain_after_exit,optional" systemd:"RemainAfterExit"`
-	Restart         string `hcl:"restart,optional" systemd:"Restart"`
+	RemainAfterExit bool `hcl:"remain_after_exit,optional" systemd:"RemainAfterExit"`
+	// Takes a boolean parameter. If set, all System V and POSIX IPC objects owned by the user and group
+	// the processes of this unit are run as are removed when the unit is stopped. This setting only has an
+	// effect if at least one of User=, Group= and DynamicUser= are used. It has no effect on IPC objects
+	// owned by the root user. Specifically, this removes System V semaphores, as well as System V and
+	// POSIX shared memory segments and message queues. If multiple units use the same user or group the
+	// IPC objects are removed when the last of these units is stopped. This setting is implied if
+	// DynamicUser= is set.
+	RemoveIPC bool   `hcl:"remove_ipc,optional" systemd:"RemoveIPC"`
+	Restart   string `hcl:"restart,optional" systemd:"Restart"`
 	// Takes a list of exit status definitions that, when returned by the main service process, will force
 	// automatic service restarts, regardless of the restart setting configured with Restart=. The argument
 	// format is similar to RestartPreventExitStatus=.
@@ -305,6 +2469,10 @@ type ServiceBlock struct {
 	// no matter whether the corresponding exit statuses are listed in this option or not.
 	//
 	RestartForceExitStatus string `hcl:"restart_force_exit_status,optional" systemd:"RestartForceExitStatus"`
+	// Specifies which signal to use when restarting a service. The same as KillSignal= described above,
+	// with the exception that this setting is used in a restart job. Not set by default, and the value of
+	// KillSignal= is used.
+	RestartKillSignal syscall.Signal `unitd:"restart_kill_signal,optional" systemd:"RestartKillSignal"`
 	// Configures the longest time to sleep before restarting a service as the interval goes up with
 	// RestartSteps=. Takes a value in the same format as RestartSec=, or infinity to disable the setting.
 	// Defaults to infinity.
@@ -364,6 +2532,124 @@ type ServiceBlock struct {
 	// This setting is effective only if RestartMaxDelaySec= is also set and RestartSec= is not zero.
 	//
 	RestartSteps uint64 `hcl:"restart_steps,optional" systemd:"RestartSteps"`
+	// Restricts the set of socket address families accessible to the processes of this unit. Takes none,
+	// or a space-separated list of address family names to allow-list, such as AF_UNIX, AF_INET or
+	// AF_INET6, see <citerefentry
+	// project='man-pages'><refentrytitle>address_families</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// for all possible options. When none is specified, then all address families will be denied. When
+	// prefixed with ~ the listed address families will be applied as deny list, otherwise as allow list.
+	//
+	// By default, no restrictions apply, all address families are accessible to processes. If assigned the
+	// empty string, any previous address family restriction changes are undone. This setting does not
+	// affect commands prefixed with +.
+	//
+	// Use this option to limit exposure of processes to remote access, in particular via exotic and
+	// sensitive network protocols, such as AF_PACKET. Note that in most cases, the local AF_UNIX address
+	// family should be included in the configured allow list as it is frequently used for local
+	// communication, including for
+	// <citerefentry><refentrytitle>syslog</refentrytitle><manvolnum>2</manvolnum></citerefentry> logging.
+	//
+	// Note that this restricts access to the <citerefentry
+	// project='man-pages'><refentrytitle>socket</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// system call only. Sockets passed into the process by other means (for example, by using socket
+	// activation with socket units, see
+	// <citerefentry><refentrytitle>systemd.socket</refentrytitle><manvolnum>5</manvolnum></citerefentry>)
+	// are unaffected. Also, sockets created with <function>socketpair()</function> (which creates
+	// connected AF_UNIX sockets) or the <citerefentry
+	// project='man-pages'><refentrytitle>io_uring</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// functions, are not affected. Thus, it is recommended to combined this setting with
+	// SystemCallFilter=@service, to only allow a limited subset of system calls.
+	//
+	// Note that this option is limited to some ABIs, in particular x86-64, but currently has no effect on
+	// 32-bit x86, s390, s390x, mips, mips-le, ppc, ppc-le, ppc64, or ppc64-le, and is ignored. On systems
+	// supporting multiple ABIs (such as x86/x86-64) it is recommended to turn off alternative ABIs for
+	// services, so that they cannot be used to circumvent the restrictions of this option. Specifically,
+	// it is recommended to combine this option with SystemCallArchitectures=native or similar.
+	//
+	RestrictAddressFamilies []string `hcl:"restrict_address_families,optional" systemd:"RestrictAddressFamilies"`
+	RestrictFileSystems     []string `hcl:"restrict_file_systems,optional" systemd:"RestrictFileSystems"`
+	// Restricts access to Linux namespace functionality for the processes of this unit. For details about
+	// Linux namespaces, see <citerefentry
+	// project='man-pages'><refentrytitle>namespaces</refentrytitle><manvolnum>7</manvolnum></citerefentry>.
+	// Either takes a boolean argument, or a space-separated list of namespace type identifiers. If false
+	// (the default), no restrictions on namespace creation and switching are made. If true, access to any
+	// kind of namespacing is prohibited. Otherwise, a space-separated list of namespace type identifiers
+	// must be specified, consisting of any combination of: cgroup, ipc, net, mnt, pid, user, uts, and
+	// time. Any namespace type listed is made accessible to the unit's processes, access to namespace
+	// types not listed is prohibited (allow-listing). By prepending the list with a single tilde character
+	// (~) the effect may be inverted: only the listed namespace types will be made inaccessible, all
+	// unlisted ones are permitted (deny-listing). If the empty string is assigned, the default namespace
+	// restrictions are applied, which is equivalent to false. This option may appear more than once, in
+	// which case the namespace types are merged by OR, or by AND if the lines are prefixed with ~ (see
+	// examples below). Internally, this setting limits access to the
+	// <citerefentry><refentrytitle>unshare</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry><refentrytitle>clone</refentrytitle><manvolnum>2</manvolnum></citerefentry> and
+	// <citerefentry><refentrytitle>setns</refentrytitle><manvolnum>2</manvolnum></citerefentry> system
+	// calls, taking the specified flags parameters into account. Note that — if this option is used —
+	// in addition to restricting creation and switching of the specified types of namespaces (or all of
+	// them, if true) access to the <function>setns()</function> system call with a zero flags parameter is
+	// prohibited. This setting is only supported on x86, x86-64, mips, mips-le, mips64, mips64-le,
+	// mips64-n32, mips64-le-n32, ppc64, ppc64-le, s390 and s390x, and enforces no restrictions on other
+	// architectures.
+	//
+	// Example: if a unit has the following, <programlisting>RestrictNamespaces=cgroup ipc
+	// RestrictNamespaces=cgroup net</programlisting> then cgroup, ipc, and net are set. If the second line
+	// is prefixed with ~, e.g., <programlisting>RestrictNamespaces=cgroup ipc RestrictNamespaces=~cgroup
+	// net</programlisting> then, only ipc is set.
+	//
+	RestrictNamespaces        []string `hcl:"restrict_namespaces,optional" systemd:"RestrictNamespaces"`
+	RestrictNetworkInterfaces []string `hcl:"restrict_network_interfaces,optional" systemd:"RestrictNetworkInterfaces"`
+	// Takes a boolean argument. If set, any attempts to enable realtime scheduling in a process of the
+	// unit are refused. This restricts access to realtime task scheduling policies such as SCHED_FIFO,
+	// SCHED_RR or SCHED_DEADLINE. See <citerefentry
+	// project='man-pages'><refentrytitle>sched</refentrytitle><manvolnum>7</manvolnum></citerefentry> for
+	// details about these scheduling policies. Realtime scheduling policies may be used to monopolize CPU
+	// time for longer periods of time, and may hence be used to lock up or otherwise trigger
+	// Denial-of-Service situations on the system. It is hence recommended to restrict access to realtime
+	// scheduling to the few programs that actually require them. Defaults to off.
+	RestrictRealtime bool `hcl:"restrict_realtime,optional" systemd:"RestrictRealtime"`
+	// Takes a boolean argument. If set, any attempts to set the set-user-ID (SUID) or set-group-ID (SGID)
+	// bits on files or directories will be denied (for details on these bits see <citerefentry
+	// project='man-pages'><refentrytitle>inode</refentrytitle><manvolnum>7</manvolnum></citerefentry>). As
+	// the SUID/SGID bits are mechanisms to elevate privileges, and allow users to acquire the identity of
+	// other users, it is recommended to restrict creation of SUID/SGID files to the few programs that
+	// actually require them. Note that this restricts marking of any type of file system object with these
+	// bits, including both regular files and directories (where the SGID is a different meaning than for
+	// files, see documentation). This option is implied if DynamicUser= is enabled.
+	//
+	// In other cases, this setting defaults to the value set with DefaultRestrictSUIDSGID= in
+	// <citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
+	// which defaults to off.
+	//
+	RestrictSUIDSGID bool `hcl:"restrict_suidsgid,optional" systemd:"RestrictSUIDSGID"`
+	// Takes a directory path relative to the host's root directory (i.e. the root of the system running
+	// the service manager). Sets the root directory for executed processes, with the <citerefentry
+	// project='man-pages'><refentrytitle>pivot_root</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// or <citerefentry
+	// project='man-pages'><refentrytitle>chroot</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// system call. If this is used, it must be ensured that the process binary and all its auxiliary files
+	// are available in the new root. Note that setting this parameter might result in additional
+	// dependencies to be added to the unit (see above).
+	//
+	// The MountAPIVFS= and PrivateUsers= settings are particularly useful in conjunction with
+	// RootDirectory=. For details, see below.
+	//
+	// If RootDirectory=/RootImage= are used together with NotifyAccess= the notification socket is
+	// automatically mounted from the host into the root environment, to ensure the notification interface
+	// can work correctly.
+	//
+	// Note that services using RootDirectory=/RootImage= will not be able to log via the syslog or journal
+	// protocols to the host logging infrastructure, unless the relevant sockets are mounted from the host,
+	// specifically:
+	//
+	// The host's
+	// <citerefentry><refentrytitle>os-release</refentrytitle><manvolnum>5</manvolnum></citerefentry> file
+	// will be made available for the service (read-only) as /run/host/os-release. It will be updated
+	// automatically on soft reboot (see:
+	// <citerefentry><refentrytitle>systemd-soft-reboot.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>),
+	// in case the service is configured to survive it.
+	//
+	RootDirectory string `hcl:"root_directory,optional" systemd:"RootDirectory"`
 	// Takes a boolean argument. If true, the root directory, as configured with the RootDirectory= option
 	// (see
 	// <citerefentry><refentrytitle>systemd.exec</refentrytitle><manvolnum>5</manvolnum></citerefentry> for
@@ -372,6 +2658,150 @@ type ServiceBlock struct {
 	// commands. If false, the setting is applied to all configured commands the same way. Defaults to
 	// false.
 	RootDirectoryStartOnly bool `hcl:"root_directory_start_only,optional" systemd:"RootDirectoryStartOnly"`
+	// Takes a boolean argument. If enabled, executed processes will run in an ephemeral copy of the root
+	// directory or root image. The ephemeral copy is placed in /var/lib/systemd/ephemeral-trees/ while the
+	// service is active and is cleaned up when the service is stopped or restarted. If RootDirectory= is
+	// used and the root directory is a subvolume, the ephemeral copy will be created by making a snapshot
+	// of the subvolume.
+	//
+	// To make sure making ephemeral copies can be made efficiently, the root directory or root image
+	// should be located on the same filesystem as /var/lib/systemd/ephemeral-trees/. When using
+	// RootEphemeral= with root directories, <citerefentry project='url'><refentrytitle
+	// url='https://btrfs.readthedocs.io/en/latest/btrfs-man5.html'>btrfs</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// should be used as the filesystem and the root directory should ideally be a subvolume which systemd
+	// can snapshot to make the ephemeral copy. For root images, a filesystem with support for reflinks
+	// should be used to ensure an efficient ephemeral copy.
+	//
+	RootEphemeral bool `hcl:"root_ephemeral,optional" systemd:"RootEphemeral"`
+	// Takes a data integrity (dm-verity) root hash specified in hexadecimal, or the path to a file
+	// containing a root hash in ASCII hexadecimal format. This option enables data integrity checks using
+	// dm-verity, if the used image contains the appropriate integrity data (see above) or if RootVerity=
+	// is used. The specified hash must match the root hash of integrity data, and is usually at least 256
+	// bits (and hence 64 formatted hexadecimal characters) long (in case of SHA256 for example). If this
+	// option is not specified, but the image file carries the user.verity.roothash extended file attribute
+	// (see <citerefentry
+	// project='man-pages'><refentrytitle>xattr</refentrytitle><manvolnum>7</manvolnum></citerefentry>),
+	// then the root hash is read from it, also as formatted hexadecimal characters. If the extended file
+	// attribute is not found (or is not supported by the underlying file system), but a file with the
+	// .roothash suffix is found next to the image file, bearing otherwise the same name (except if the
+	// image has the .raw suffix, in which case the root hash file must not have it in its name), the root
+	// hash is read from it and automatically used, also as formatted hexadecimal characters.
+	//
+	// If the disk image contains a separate /usr/ partition it may also be Verity protected, in which case
+	// the root hash may configured via an extended attribute user.verity.usrhash or a .usrhash file
+	// adjacent to the disk image. There's currently no option to configure the root hash for the /usr/
+	// file system via the unit file directly.
+	//
+	RootHash string `hcl:"root_hash,optional" systemd:"RootHash"`
+	// Takes a PKCS7 signature of the RootHash= option as a path to a DER-encoded signature file, or as an
+	// ASCII base64 string encoding of a DER-encoded signature prefixed by base64:. The dm-verity volume
+	// will only be opened if the signature of the root hash is valid and signed by a public key present in
+	// the kernel keyring. If this option is not specified, but a file with the .roothash.p7s suffix is
+	// found next to the image file, bearing otherwise the same name (except if the image has the .raw
+	// suffix, in which case the signature file must not have it in its name), the signature is read from
+	// it and automatically used.
+	//
+	// If the disk image contains a separate /usr/ partition it may also be Verity protected, in which case
+	// the signature for the root hash may configured via a .usrhash.p7s file adjacent to the disk image.
+	// There's currently no option to configure the root hash signature for the /usr/ via the unit file
+	// directly.
+	//
+	RootHashSignature string `hcl:"root_hash_signature,optional" systemd:"RootHashSignature"`
+	// Takes a path to a block device node or regular file as argument. This call is similar to
+	// RootDirectory= however mounts a file system hierarchy from a block device node or loopback file
+	// instead of a directory. The device node or file system image file needs to contain a file system
+	// without a partition table, or a file system within an MBR/MS-DOS or GPT partition table with only a
+	// single Linux-compatible partition, or a set of file systems within a GPT partition table that
+	// follows the <ulink
+	// url="https://uapi-group.org/specifications/specs/discoverable_partitions_specification">UAPI.2
+	// Discoverable Partitions Specification</ulink>.
+	//
+	// When DevicePolicy= is set to closed or strict, or set to auto and DeviceAllow= is set, then this
+	// setting adds /dev/loop-control with rw mode, block-loop and block-blkext with rwm mode to
+	// DeviceAllow=. See
+	// <citerefentry><refentrytitle>systemd.resource-control</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// for the details about DevicePolicy= or DeviceAllow=. Also, see PrivateDevices= below, as it may
+	// change the setting of DevicePolicy=.
+	//
+	// Units making use of RootImage= automatically gain an After= dependency on systemd-udevd.service.
+	//
+	// The host's
+	// <citerefentry><refentrytitle>os-release</refentrytitle><manvolnum>5</manvolnum></citerefentry> file
+	// will be made available for the service (read-only) as /run/host/os-release. It will be updated
+	// automatically on soft reboot (see:
+	// <citerefentry><refentrytitle>systemd-soft-reboot.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>),
+	// in case the service is configured to survive it.
+	//
+	RootImage string `hcl:"root_image,optional" systemd:"RootImage"`
+	// Takes a comma-separated list of mount options that will be used on disk images specified by
+	// RootImage=. Optionally a partition name can be prefixed, followed by colon, in case the image has
+	// multiple partitions, otherwise partition name root is implied. Options for multiple partitions can
+	// be specified in a single line with space separators. Assigning an empty string removes previous
+	// assignments. For a list of valid mount options, please refer to <citerefentry
+	// project='man-pages'><refentrytitle>mount</refentrytitle><manvolnum>8</manvolnum></citerefentry>.
+	//
+	// Valid partition names follow the <ulink
+	// url="https://uapi-group.org/specifications/specs/discoverable_partitions_specification">
+	// Discoverable Partitions Specification</ulink>: root, usr, home, srv, esp, xbootldr, tmp, var.
+	//
+	RootImageOptions []string `hcl:"root_image_options,optional" systemd:"RootImageOptions"`
+	// Takes an image policy string as per
+	// <citerefentry><refentrytitle>systemd.image-policy</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// to use when mounting the disk images (DDI) specified in RootImage=, MountImage=, ExtensionImage=,
+	// respectively. If not specified the following policy string is the default for RootImagePolicy= and
+	// MountImagePolicy:
+	//
+	// The default policy for ExtensionImagePolicy= is:
+	//
+	RootImagePolicy string `hcl:"root_image_policy,optional" systemd:"RootImagePolicy"`
+	// Takes a path to a
+	// <citerefentry><refentrytitle>systemd.mstack</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// directory encapsulating a mount stack consisting of layers and bind mounts. Similar to
+	// RootDirectory= and RootImage= this runs the service off a distinct root file system, in this case
+	// set up via overlayfs.
+	//
+	// Since .mstack/ directories may reference disk images (DDIs) similar device policy extensions and
+	// dependencies are in effect when RootMStack= is used as are if RootImage= is used.
+	//
+	RootMStack string `hcl:"root_m_stack,optional" systemd:"RootMStack"`
+	// Takes the path to a data integrity (dm-verity) file. This option enables data integrity checks using
+	// dm-verity, if RootImage= is used and a root-hash is passed and if the used image itself does not
+	// contain the integrity data. The integrity data must be matched by the root hash. If this option is
+	// not specified, but a file with the .verity suffix is found next to the image file, bearing otherwise
+	// the same name (except if the image has the .raw suffix, in which case the verity data file must not
+	// have it in its name), the verity data is read from it and automatically used.
+	//
+	// This option is supported only for disk images that contain a single file system, without an
+	// enveloping partition table. Images that contain a GPT partition table should instead include both
+	// root file system and matching Verity data in the same image, implementing the <ulink
+	// url="https://uapi-group.org/specifications/specs/discoverable_partitions_specification">
+	// Discoverable Partitions Specification</ulink>.
+	//
+	RootVerity string `hcl:"root_verity,optional" systemd:"RootVerity"`
+	// /run/
+	RuntimeDirectory []string `hcl:"runtime_directory,optional" systemd:"RuntimeDirectory"`
+	// Specifies the access mode of the directories specified in RuntimeDirectory=, StateDirectory=,
+	// CacheDirectory=, LogsDirectory=, or ConfigurationDirectory=, respectively, as an octal number.
+	// Defaults to 0755. See "Permissions" in <citerefentry
+	// project='man-pages'><refentrytitle>path_resolution</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// for a discussion of the meaning of permission bits.
+	RuntimeDirectoryMode os.FileMode `unitd:"runtime_directory_mode,optional" systemd:"RuntimeDirectoryMode"`
+	// Takes a boolean argument or restart. If set to no (the default), the directories specified in
+	// RuntimeDirectory= are always removed when the service stops. If set to restart the directories are
+	// preserved when the service is both automatically and manually restarted. Here, the automatic restart
+	// means the operation specified in Restart=, and manual restart means the one triggered by systemctl
+	// restart foo.service. If set to yes, then the directories are not removed when the service is
+	// stopped. Note that since the runtime directory /run/ is a mount point of tmpfs, then for system
+	// services the directories specified in RuntimeDirectory= are removed when the system is rebooted.
+	//
+	// If DynamicUser= is used together with RuntimeDirectoryPreserve= set to values other than no, the
+	// logic is slightly altered: the RuntimeDirectory= directories are created below /run/private/, which
+	// is a host directory made inaccessible to unprivileged users, which ensures that access to these
+	// directories cannot be gained through dynamic user ID recycling. Symbolic links are created to hide
+	// this difference in behaviour. Both from the perspective of the host and from inside the unit, the
+	// relevant directories hence always appear directly below /run/.
+	//
+	RuntimeDirectoryPreserve string `hcl:"runtime_directory_preserve,optional" systemd:"RuntimeDirectoryPreserve"`
 	// Configures a maximum time for the service to run. If this is used and the service has been active
 	// for longer than the specified time it is terminated and put into a failure state. Note that this
 	// setting does not have any effect on Type=oneshot services, as they terminate immediately after
@@ -391,6 +2821,96 @@ type ServiceBlock struct {
 	// duration between 0 and the specified value (in seconds). If RuntimeMaxSec= is unspecified, then this
 	// feature will be disabled.
 	RuntimeRandomizedExtraSec int `hcl:"runtime_randomized_extra_sec,optional" systemd:"RuntimeRandomizedExtraSec"`
+	// Set the SELinux security context of the executed process. If set, this will override the automated
+	// domain transition. However, the policy still needs to authorize the transition. This directive is
+	// ignored if SELinux is disabled. If prefixed by -, failing to set the SELinux security context will
+	// be ignored, but it is still possible that the subsequent <function>execve()</function> may fail if
+	// the policy does not allow the transition for the non-overridden context. This does not affect
+	// commands prefixed with +. See <citerefentry
+	// project='die-net'><refentrytitle>setexeccon</refentrytitle><manvolnum>3</manvolnum></citerefentry>
+	// for details.
+	SELinuxContext string `hcl:"se_linux_context,optional" systemd:"SELinuxContext"`
+	// Controls the secure bits set for the executed process. Takes a space-separated combination of
+	// options from the following list: keep-caps, keep-caps-locked, no-setuid-fixup,
+	// no-setuid-fixup-locked, noroot, and noroot-locked. This option may appear more than once, in which
+	// case the secure bits are ORed. If the empty string is assigned to this option, the bits are reset to
+	// 0. This does not affect commands prefixed with +. See <citerefentry
+	// project='man-pages'><refentrytitle>capabilities</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// for details.
+	SecureBits string `hcl:"secure_bits,optional" systemd:"SecureBits"`
+	// Specifies whether to send SIGHUP to remaining processes immediately after sending the signal
+	// configured with KillSignal=. This is useful to indicate to shells and shell-like programs that their
+	// connection has been severed. Takes a boolean value. Defaults to no.
+	SendSIGHUP bool `hcl:"send_sighup,optional" systemd:"SendSIGHUP"`
+	// Specifies whether to send SIGKILL (or the signal specified by FinalKillSignal=) to remaining
+	// processes after a timeout, if the normal shutdown procedure left processes of the service around.
+	// When disabled, a KillMode= of control-group or mixed service will not restart if processes from
+	// prior services exist within the control group. Takes a boolean value. Defaults to yes.
+	SendSIGKILL bool `hcl:"send_sigkill,optional" systemd:"SendSIGKILL"`
+	// The SetCredential= setting is similar to LoadCredential= but accepts a literal value to use as data
+	// for the credential, instead of a file system path to read the data from. Do not use this option for
+	// data that is supposed to be secret, as it is accessible to unprivileged processes via IPC. It's only
+	// safe to use this for user IDs, public key material and similar non-sensitive data. For everything
+	// else use LoadCredential=. In order to embed binary data into the credential data use C-style
+	// escaping (i.e. \n to embed a newline, or \x00 to embed a NUL byte).
+	//
+	// The SetCredentialEncrypted= setting is identical to SetCredential= but expects an encrypted
+	// credential in literal form as value. This allows embedding confidential credentials securely
+	// directly in unit files. Use
+	// <citerefentry><refentrytitle>systemd-creds</refentrytitle><manvolnum>1</manvolnum></citerefentry>'
+	// -p switch to generate suitable SetCredentialEncrypted= lines directly from plaintext credentials.
+	// For further details see LoadCredentialEncrypted= above.
+	//
+	// When multiple credentials of the same name are found, credentials found by LoadCredential=,
+	// LoadCredentialEncrypted= and ImportCredential= take priority over credentials found by
+	// SetCredential=. As such, SetCredential= will act as default if no credentials are found by any of
+	// the former. In this case, not being able to retrieve the credential from the path specified in
+	// LoadCredential= or LoadCredentialEncrypted= is not considered fatal.
+	//
+	SetCredential []string `hcl:"set_credential,optional" systemd:"SetCredential"`
+	// The SetCredential= setting is similar to LoadCredential= but accepts a literal value to use as data
+	// for the credential, instead of a file system path to read the data from. Do not use this option for
+	// data that is supposed to be secret, as it is accessible to unprivileged processes via IPC. It's only
+	// safe to use this for user IDs, public key material and similar non-sensitive data. For everything
+	// else use LoadCredential=. In order to embed binary data into the credential data use C-style
+	// escaping (i.e. \n to embed a newline, or \x00 to embed a NUL byte).
+	//
+	// The SetCredentialEncrypted= setting is identical to SetCredential= but expects an encrypted
+	// credential in literal form as value. This allows embedding confidential credentials securely
+	// directly in unit files. Use
+	// <citerefentry><refentrytitle>systemd-creds</refentrytitle><manvolnum>1</manvolnum></citerefentry>'
+	// -p switch to generate suitable SetCredentialEncrypted= lines directly from plaintext credentials.
+	// For further details see LoadCredentialEncrypted= above.
+	//
+	// When multiple credentials of the same name are found, credentials found by LoadCredential=,
+	// LoadCredentialEncrypted= and ImportCredential= take priority over credentials found by
+	// SetCredential=. As such, SetCredential= will act as default if no credentials are found by any of
+	// the former. In this case, not being able to retrieve the credential from the path specified in
+	// LoadCredential= or LoadCredentialEncrypted= is not considered fatal.
+	//
+	SetCredentialEncrypted []string `hcl:"set_credential_encrypted,optional" systemd:"SetCredentialEncrypted"`
+	// Takes a boolean parameter that controls whether to set the $HOME, $LOGNAME, and $SHELL environment
+	// variables. If not set, this defaults to true if User=, DynamicUser= or PAMName= are set, false
+	// otherwise. If set to true, the variables will always be set for system services, i.e. even when the
+	// default user root is used. If set to false, the mentioned variables are not set by the service
+	// manager, no matter whether User=, DynamicUser=, or PAMName= are used or not. This option normally
+	// has no effect on services of the per-user service manager, since in that case these variables are
+	// typically inherited from user manager's own environment anyway.
+	SetLoginEnvironment bool   `hcl:"set_login_environment,optional" systemd:"SetLoginEnvironment"`
+	Slice               string `hcl:"slice,optional" systemd:"Slice"`
+	// Takes a SMACK64 security label as argument. The process executed by the unit will be started under
+	// this label and SMACK will decide whether the process is allowed to run or not, based on it. The
+	// process will continue to run under the label specified here unless the executable has its own
+	// SMACK64EXEC label, in which case the process will transition to run under that label. When not
+	// specified, the label that systemd is running under is used. This directive is ignored if SMACK is
+	// disabled.
+	//
+	// The value may be prefixed by -, in which case all errors will be ignored. An empty value may be
+	// specified to unset previous assignments. This does not affect commands prefixed with +.
+	//
+	SmackProcessLabel string   `hcl:"smack_process_label,optional" systemd:"SmackProcessLabel"`
+	SocketBindAllow   []string `hcl:"socket_bind_allow,optional" systemd:"SocketBindAllow"`
+	SocketBindDeny    []string `hcl:"socket_bind_deny,optional" systemd:"SocketBindDeny"`
 	// Specifies the name of the socket units this service shall inherit socket file descriptors from when
 	// the service is started. Normally, it should not be necessary to use this setting, as all socket file
 	// descriptors whose unit shares the same name as the service (subject to the different unit name
@@ -406,10 +2926,253 @@ type ServiceBlock struct {
 	// once set, clearing the list of sockets again (for example, by assigning the empty string to this
 	// option) is not supported.
 	//
-	Sockets            []string `hcl:"sockets,optional" systemd:"Sockets"`
-	StartLimitAction   string   `hcl:"start_limit_action,optional" systemd:"StartLimitAction"`
-	StartLimitBurst    uint64   `hcl:"start_limit_burst,optional" systemd:"StartLimitBurst"`
-	StartLimitInterval int      `hcl:"start_limit_interval,optional" systemd:"StartLimitInterval"`
+	Sockets []string `hcl:"sockets,optional" systemd:"Sockets"`
+	// Controls where file descriptor 2 (stderr) of the executed processes is connected to. The available
+	// options are identical to those of StandardOutput=, with some exceptions: if set to inherit the file
+	// descriptor used for standard output is duplicated for standard error, while fd:name will use a
+	// default file descriptor name of stderr.
+	//
+	// This setting defaults to the value set with DefaultStandardError= in
+	// <citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
+	// which defaults to inherit. Note that setting this parameter might result in additional dependencies
+	// to be added to the unit (see above).
+	//
+	StandardError string `hcl:"standard_error,optional" systemd:"StandardError"`
+	// Controls where file descriptor 0 (STDIN) of the executed processes is connected to. Takes one of
+	// null, tty, tty-force, tty-fail, data, file:path, socket or fd:name.
+	//
+	// If null is selected, standard input will be connected to /dev/null, i.e. all read attempts by the
+	// process will result in immediate EOF.
+	//
+	// If tty is selected, standard input is connected to a TTY (as configured by TTYPath=, see below) and
+	// the executed process becomes the controlling process of the terminal. If the terminal is already
+	// being controlled by another process, the executed process waits until the current controlling
+	// process releases the terminal.
+	//
+	// tty-force is similar to tty, but the executed process is forcefully and immediately made the
+	// controlling process of the terminal, potentially removing previous controlling processes from the
+	// terminal.
+	//
+	// tty-fail is similar to tty, but if the terminal already has a controlling process start-up of the
+	// executed process fails.
+	//
+	// The data option may be used to configure arbitrary textual or binary data to pass via standard input
+	// to the executed process. The data to pass is configured via StandardInputText=/StandardInputData=
+	// (see below). Note that the actual file descriptor type passed (memory file, regular file, UNIX pipe,
+	// …) might depend on the kernel and available privileges. In any case, the file descriptor is
+	// read-only, and when read returns the specified data followed by EOF.
+	//
+	// The file:path option may be used to connect a specific file system object to standard input. An
+	// absolute path following the : character is expected, which may refer to a regular file, a FIFO or
+	// special file. If an AF_UNIX socket in the file system is specified, a stream socket is connected to
+	// it. The latter is useful for connecting standard input of processes to arbitrary system services.
+	//
+	// The socket option is valid in socket-activated services only, and requires the relevant socket unit
+	// file (see
+	// <citerefentry><refentrytitle>systemd.socket</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// for details) to have Accept=yes set, or to specify a single socket only. If this option is set,
+	// standard input will be connected to the socket the service was activated from, which is primarily
+	// useful for compatibility with daemons designed for use with the traditional <citerefentry
+	// project='freebsd'><refentrytitle>inetd</refentrytitle><manvolnum>8</manvolnum></citerefentry> socket
+	// activation daemon ($LISTEN_FDS (and related) environment variables are not passed when socket value
+	// is configured).
+	//
+	// The fd:name option connects standard input to a specific, named file descriptor provided by a socket
+	// unit. The name may be specified as part of this option, following a : character (e.g. fd:foobar). If
+	// no name is specified, the name stdin is implied (i.e. fd is equivalent to fd:stdin). At least one
+	// socket unit defining the specified name must be provided via the Sockets= option, and the file
+	// descriptor name may differ from the name of its containing socket unit. If multiple matches are
+	// found, the first one will be used. See FileDescriptorName= in
+	// <citerefentry><refentrytitle>systemd.socket</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// for more details about named file descriptors and their ordering.
+	//
+	// This setting defaults to null, unless StandardInputText=/StandardInputData= are set, in which case
+	// it defaults to data.
+	//
+	StandardInput string `hcl:"standard_input,optional" systemd:"StandardInput"`
+	// Configures arbitrary textual or binary data to pass via file descriptor 0 (STDIN) to the executed
+	// processes. These settings have no effect unless StandardInput= is set to data (which is the default
+	// if StandardInput= is not set otherwise, but StandardInputText=/StandardInputData= is). Use this
+	// option to embed process input data directly in the unit file.
+	//
+	// StandardInputText= accepts arbitrary textual data. C-style escapes for special characters as well as
+	// the usual %-specifiers are resolved. Each time this setting is used the specified text is appended
+	// to the per-unit data buffer, followed by a newline character (thus every use appends a new line to
+	// the end of the buffer). Note that leading and trailing whitespace of lines configured with this
+	// option is removed. If an empty line is specified the buffer is cleared (hence, in order to insert an
+	// empty line, add an additional \n to the end or beginning of a line).
+	//
+	// StandardInputData= accepts arbitrary binary data, encoded in <ulink
+	// url="https://tools.ietf.org/html/rfc2045#section-6.8">Base64</ulink>. No escape sequences or
+	// specifiers are resolved. Any whitespace in the encoded version is ignored during decoding.
+	//
+	// Note that StandardInputText= and StandardInputData= operate on the same data buffer, and may be
+	// mixed in order to configure both binary and textual data for the same input stream. The textual or
+	// binary data is joined strictly in the order the settings appear in the unit file. Assigning an empty
+	// string to either will reset the data buffer.
+	//
+	// Please keep in mind that in order to maintain readability long unit file settings may be split into
+	// multiple lines, by suffixing each line (except for the last) with a \ character (see
+	// <citerefentry><refentrytitle>systemd.unit</refentrytitle><manvolnum>5</manvolnum></citerefentry> for
+	// details). This is particularly useful for large data configured with these two options. Example:
+	//
+	StandardInputData string `hcl:"standard_input_data,optional" systemd:"StandardInputData"`
+	// Configures arbitrary textual or binary data to pass via file descriptor 0 (STDIN) to the executed
+	// processes. These settings have no effect unless StandardInput= is set to data (which is the default
+	// if StandardInput= is not set otherwise, but StandardInputText=/StandardInputData= is). Use this
+	// option to embed process input data directly in the unit file.
+	//
+	// StandardInputText= accepts arbitrary textual data. C-style escapes for special characters as well as
+	// the usual %-specifiers are resolved. Each time this setting is used the specified text is appended
+	// to the per-unit data buffer, followed by a newline character (thus every use appends a new line to
+	// the end of the buffer). Note that leading and trailing whitespace of lines configured with this
+	// option is removed. If an empty line is specified the buffer is cleared (hence, in order to insert an
+	// empty line, add an additional \n to the end or beginning of a line).
+	//
+	// StandardInputData= accepts arbitrary binary data, encoded in <ulink
+	// url="https://tools.ietf.org/html/rfc2045#section-6.8">Base64</ulink>. No escape sequences or
+	// specifiers are resolved. Any whitespace in the encoded version is ignored during decoding.
+	//
+	// Note that StandardInputText= and StandardInputData= operate on the same data buffer, and may be
+	// mixed in order to configure both binary and textual data for the same input stream. The textual or
+	// binary data is joined strictly in the order the settings appear in the unit file. Assigning an empty
+	// string to either will reset the data buffer.
+	//
+	// Please keep in mind that in order to maintain readability long unit file settings may be split into
+	// multiple lines, by suffixing each line (except for the last) with a \ character (see
+	// <citerefentry><refentrytitle>systemd.unit</refentrytitle><manvolnum>5</manvolnum></citerefentry> for
+	// details). This is particularly useful for large data configured with these two options. Example:
+	//
+	StandardInputText string `hcl:"standard_input_text,optional" systemd:"StandardInputText"`
+	// Controls where file descriptor 1 (stdout) of the executed processes is connected to. Takes one of
+	// inherit, null, tty, journal, kmsg, journal+console, kmsg+console, file:path, append:path,
+	// truncate:path, socket or fd:name.
+	//
+	// inherit duplicates the file descriptor of standard input for standard output.
+	//
+	// null connects standard output to /dev/null, i.e. everything written to it will be lost.
+	//
+	// tty connects standard output to a tty (as configured via TTYPath=, see below). If the TTY is used
+	// for output only, the executed process will not become the controlling process of the terminal, and
+	// will not fail or wait for other processes to release the terminal. Note: if a unit tries to print
+	// multiple lines to a TTY during bootup or shutdown, then there's a chance that those lines will be
+	// broken up by status messages. <function>SetShowStatus()</function> can be used to prevent this
+	// problem. See <citerefentry
+	// project="man-pages"><refentrytitle>org.freedesktop.systemd1</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// for details.
+	//
+	// journal connects standard output with the journal, which is accessible via
+	// <citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>. Note
+	// that everything that is written to kmsg (see below) is implicitly stored in the journal as well, the
+	// specific option listed below is hence a superset of this one. (Also note that any external,
+	// additional syslog daemons receive their log data from the journal, too, hence this is the option to
+	// use when logging shall be processed with such a daemon.)
+	//
+	// kmsg connects standard output with the kernel log buffer which is accessible via <citerefentry
+	// project='man-pages'><refentrytitle>dmesg</refentrytitle><manvolnum>1</manvolnum></citerefentry>, in
+	// addition to the journal. The journal daemon might be configured to send all logs to kmsg anyway, in
+	// which case this option is no different from journal.
+	//
+	// journal+console and kmsg+console work in a similar way as the two options above but copy the output
+	// to the system console as well.
+	//
+	// The file:path option may be used to connect a specific file system object to standard output. The
+	// semantics are similar to the same option of StandardInput=, see above. If path refers to a regular
+	// file on the filesystem, it is opened (created if it does not exist yet using privileges of the user
+	// executing the systemd process) for writing at the beginning of the file, but without truncating it.
+	// If standard input and output are directed to the same file path, it is opened only once — for
+	// reading as well as writing — and duplicated. This is particularly useful when the specified path
+	// refers to an AF_UNIX socket in the file system, as in that case only a single stream connection is
+	// created for both input and output.
+	//
+	// append:path is similar to file:path above, but it opens the file in append mode.
+	//
+	// truncate:path is similar to file:path above, but it truncates the file when opening it. For units
+	// with multiple command lines, e.g. Type=oneshot services with multiple ExecStart=, or services with
+	// ExecCondition=, ExecStartPre= or ExecStartPost=, the output file is reopened and therefore
+	// re-truncated for each command line. If the output file is truncated while another process still has
+	// the file open, e.g. by an ExecReload= running concurrently with an ExecStart=, and the other process
+	// continues writing to the file without adjusting its offset, then the space between the file pointers
+	// of the two processes may be filled with NUL bytes, producing a sparse file. Thus, truncate:path is
+	// typically only useful for units where only one process runs at a time, such as services with a
+	// single ExecStart= and no ExecStartPost=, ExecReload=, ExecStop= or similar.
+	//
+	// socket connects standard output to a socket acquired via socket activation. The semantics are
+	// similar to the same option of StandardInput=, see above.
+	//
+	// The fd:name option connects standard output to a specific, named file descriptor provided by a
+	// socket unit. A name may be specified as part of this option, following a : character (e.g.
+	// fd:foobar). If no name is specified, the name stdout is implied (i.e. fd is equivalent to
+	// fd:stdout). At least one socket unit defining the specified name must be provided via the Sockets=
+	// option, and the file descriptor name may differ from the name of its containing socket unit. If
+	// multiple matches are found, the first one will be used. See FileDescriptorName= in
+	// <citerefentry><refentrytitle>systemd.socket</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// for more details about named descriptors and their ordering.
+	//
+	// If the standard output (or error output, see below) of a unit is connected to the journal or the
+	// kernel log buffer, the unit will implicitly gain a dependency of type After= on
+	// systemd-journald.socket (also see the "Implicit Dependencies" section above). Also note that, in
+	// this case, stdout (or stderr, see below) will be an AF_UNIX stream socket, and not a pipe or FIFO
+	// that can be reopened. This means when executing shell scripts the construct echo "hello" &gt;
+	// /dev/stderr for writing text to stderr will not work. To mitigate this use the construct echo
+	// "hello" >&amp;2 instead, which is mostly equivalent and avoids this pitfall.
+	//
+	// If StandardInput= is set to one of tty, tty-force, tty-fail, socket, or fd:name, this setting
+	// defaults to inherit.
+	//
+	// In other cases, this setting defaults to the value set with DefaultStandardOutput= in
+	// <citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
+	// which defaults to journal. Note that setting this parameter might result in additional dependencies
+	// to be added to the unit (see above).
+	//
+	StandardOutput            string `hcl:"standard_output,optional" systemd:"StandardOutput"`
+	StartLimitAction          string `hcl:"start_limit_action,optional" systemd:"StartLimitAction"`
+	StartLimitBurst           uint64 `hcl:"start_limit_burst,optional" systemd:"StartLimitBurst"`
+	StartLimitInterval        int    `hcl:"start_limit_interval,optional" systemd:"StartLimitInterval"`
+	StartupAllowedCPUs        string `hcl:"startup_allowed_cp_us,optional" systemd:"StartupAllowedCPUs"`
+	StartupAllowedMemoryNodes string `hcl:"startup_allowed_memory_nodes,optional" systemd:"StartupAllowedMemoryNodes"`
+	StartupCPUWeight          uint64 `hcl:"startup_cpu_weight,optional" systemd:"StartupCPUWeight"`
+	StartupIOWeight           uint64 `hcl:"startup_io_weight,optional" systemd:"StartupIOWeight"`
+	StartupMemoryHigh         string `hcl:"startup_memory_high,optional" systemd:"StartupMemoryHigh"`
+	StartupMemoryLow          string `hcl:"startup_memory_low,optional" systemd:"StartupMemoryLow"`
+	StartupMemoryMax          string `hcl:"startup_memory_max,optional" systemd:"StartupMemoryMax"`
+	StartupMemorySwapMax      string `hcl:"startup_memory_swap_max,optional" systemd:"StartupMemorySwapMax"`
+	StartupMemoryZSwapMax     string `hcl:"startup_memory_z_swap_max,optional" systemd:"StartupMemoryZSwapMax"`
+	// /var/lib/
+	StateDirectory []string `hcl:"state_directory,optional" systemd:"StateDirectory"`
+	// Takes a boolean argument. If true, a project ID is assigned to the directories specified in
+	// StateDirectory=, CacheDirectory=, or LogsDirectory= respectively, which is used for tracking disk
+	// usage when disk quotas are turned on (see <ulink
+	// url="https://man7.org/linux/man-pages/man8/repquota.8.html">repquota</ulink>). Defaults to false.
+	//
+	// To set and enforce disk quotas, StateDirectoryQuota=, CacheDirectoryQuota=, or LogsDirectoryQuota=
+	// must be specified.
+	//
+	StateDirectoryAccounting bool `hcl:"state_directory_accounting,optional" systemd:"StateDirectoryAccounting"`
+	// Specifies the access mode of the directories specified in RuntimeDirectory=, StateDirectory=,
+	// CacheDirectory=, LogsDirectory=, or ConfigurationDirectory=, respectively, as an octal number.
+	// Defaults to 0755. See "Permissions" in <citerefentry
+	// project='man-pages'><refentrytitle>path_resolution</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// for a discussion of the meaning of permission bits.
+	StateDirectoryMode os.FileMode `unitd:"state_directory_mode,optional" systemd:"StateDirectoryMode"`
+	// Specifies the storage limits for the directories specified in StateDirectory=, CacheDirectory=, or
+	// LogsDirectory= respectively.
+	//
+	// The storage quota is defined in terms of disk blocks and inodes, as per <ulink
+	// url="https://man7.org/linux/man-pages/man2/quotactl.2.html">quotactl</ulink>. Takes an absolute size
+	// limit in bytes. If the value is suffixed with K, M, G or T, the specified size is parsed as
+	// Kilobytes, Megabytes, Gigabytes, or Terabytes (with the base 1024), respectively. If an absolute
+	// size limit is specified, only the block quota is set (rounded up to the nearest block).
+	// Alternatively, a percentage value may be specified, which applies the same percent quota to both
+	// blocks and inodes. Defaults to off, in which case no storage limits will be set.
+	//
+	// Only hard limits are set, not soft limits. If the underlying filesystem for the specified
+	// directories does not support project quotas, the specified storage limits will not be set. In
+	// addition to enabling per-unit quotas with these settings, it is necessary to enable prjquota on the
+	// file system level as well (i.e. tune2fs -Q prjquota). Quotas must also be turned on with <ulink
+	// url="https://linux.die.net/man/8/quotaon">quotaon.</ulink>
+	//
+	StateDirectoryQuota string `hcl:"state_directory_quota,optional" systemd:"StateDirectoryQuota"`
 	// Takes a list of exit status definitions that, when returned by the main service process, will be
 	// considered successful termination, in addition to the normal successful exit status 0 and, except
 	// for Type=oneshot, the signals SIGHUP, SIGINT, SIGTERM, and SIGPIPE. Exit status definitions can be
@@ -435,6 +3198,372 @@ type ServiceBlock struct {
 	// status values and names.
 	//
 	SuccessExitStatus string `hcl:"success_exit_status,optional" systemd:"SuccessExitStatus"`
+	// Sets the supplementary Unix groups the processes are executed as. This takes a space-separated list
+	// of group names or IDs. This option may be specified more than once, in which case all listed groups
+	// are set as supplementary groups. When the empty string is assigned, the list of supplementary groups
+	// is reset, and all assignments prior to this one will have no effect. In any way, this option does
+	// not override, but extends the list of supplementary groups configured in the system group database
+	// for the user. This does not affect commands prefixed with +.
+	SupplementaryGroups []string `hcl:"supplementary_groups,optional" systemd:"SupplementaryGroups"`
+	// Sets the syslog facility identifier to use when logging. One of kern, user, mail, daemon, auth,
+	// syslog, lpr, news, uucp, cron, authpriv, ftp, local0, local1, local2, local3, local4, local5, local6
+	// or local7. See <citerefentry
+	// project='man-pages'><refentrytitle>syslog</refentrytitle><manvolnum>3</manvolnum></citerefentry> for
+	// details. This option is only useful when StandardOutput= or StandardError= are set to journal or
+	// kmsg (or to the same settings in combination with +console), and only applies to log messages
+	// written to stdout or stderr. Defaults to daemon.
+	SyslogFacility string `hcl:"syslog_facility,optional" systemd:"SyslogFacility"`
+	// Sets the process name ("syslog tag") to prefix log lines sent to the logging system or the kernel
+	// log buffer with. If not set, defaults to the process name of the executed process. This option is
+	// only useful when StandardOutput= or StandardError= are set to journal or kmsg (or to the same
+	// settings in combination with +console) and only applies to log messages written to stdout or stderr.
+	SyslogIdentifier string `hcl:"syslog_identifier,optional" systemd:"SyslogIdentifier"`
+	// The default syslog log level to use when logging to the logging system or the kernel log buffer. One
+	// of emerg, alert, crit, err, warning, notice, info, debug. See <citerefentry
+	// project='man-pages'><refentrytitle>syslog</refentrytitle><manvolnum>3</manvolnum></citerefentry> for
+	// details. This option is only useful when StandardOutput= or StandardError= are set to journal or
+	// kmsg (or to the same settings in combination with +console), and only applies to log messages
+	// written to stdout or stderr. Note that individual lines output by executed processes may be prefixed
+	// with a different log level which can be used to override the default log level specified here. The
+	// interpretation of these prefixes may be disabled with SyslogLevelPrefix=, see below. For details,
+	// see <citerefentry><refentrytitle>sd-daemon</refentrytitle><manvolnum>3</manvolnum></citerefentry>.
+	// Defaults to info.
+	SyslogLevel int `hcl:"syslog_level,optional" systemd:"SyslogLevel"`
+	// Takes a boolean argument. If true and StandardOutput= or StandardError= are set to journal or kmsg
+	// (or to the same settings in combination with +console), log lines written by the executed process
+	// that are prefixed with a log level will be processed with this log level set but the prefix removed.
+	// If set to false, the interpretation of these prefixes is disabled and the logged lines are passed on
+	// as-is. This only applies to log messages written to stdout or stderr. For details about this
+	// prefixing see
+	// <citerefentry><refentrytitle>sd-daemon</refentrytitle><manvolnum>3</manvolnum></citerefentry>.
+	// Defaults to true.
+	SyslogLevelPrefix bool `hcl:"syslog_level_prefix,optional" systemd:"SyslogLevelPrefix"`
+	// Takes a space-separated list of architecture identifiers to include in the system call filter. The
+	// known architecture identifiers are the same as for ConditionArchitecture= described in
+	// <citerefentry><refentrytitle>systemd.unit</refentrytitle><manvolnum>5</manvolnum></citerefentry>, as
+	// well as x32, mips64-n32, mips64-le-n32, and the special identifier native. The special identifier
+	// native implicitly maps to the native architecture of the system (or more precisely: to the
+	// architecture the system manager is compiled for). By default, this option is set to the empty list,
+	// i.e. no filtering is applied.
+	//
+	// If this setting is used, processes of this unit will only be permitted to call native system calls,
+	// and system calls of the specified architectures. For the purposes of this option, the x32
+	// architecture is treated as including x86-64 system calls. However, this setting still fulfills its
+	// purpose, as explained below, on x32.
+	//
+	// System call filtering is not equally effective on all architectures. For example, on x86 filtering
+	// of network socket-related calls is not possible, due to ABI limitations — a limitation that x86-64
+	// does not have, however. On systems supporting multiple ABIs at the same time — such as x86/x86-64
+	// — it is hence recommended to limit the set of permitted system call architectures so that
+	// secondary ABIs may not be used to circumvent the restrictions applied to the native ABI of the
+	// system. In particular, setting SystemCallArchitectures=native is a good choice for disabling
+	// non-native ABIs.
+	//
+	// System call architectures may also be restricted system-wide via the SystemCallArchitectures= option
+	// in the global configuration. See
+	// <citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// for details.
+	//
+	SystemCallArchitectures []string `hcl:"system_call_architectures,optional" systemd:"SystemCallArchitectures"`
+	// Takes an errno error number (between 1 and 4095) or errno name such as EPERM, EACCES or EUCLEAN, to
+	// return when the system call filter configured with SystemCallFilter= is triggered, instead of
+	// terminating the process immediately. See <citerefentry
+	// project='man-pages'><refentrytitle>errno</refentrytitle><manvolnum>3</manvolnum></citerefentry> for
+	// a full list of error codes. When this setting is not used, or when the empty string or the special
+	// setting kill is assigned, the process will be terminated immediately when the filter is triggered.
+	SystemCallErrorNumber string `hcl:"system_call_error_number,optional" systemd:"SystemCallErrorNumber"`
+	// Takes a space-separated list of system call names or system call groups. If this setting is used,
+	// system calls executed by the unit processes except for the listed ones will result in the system
+	// call being denied (allow-listing). If the first character of the list is ~, the effect is inverted:
+	// only the listed system calls will be denied (deny-listing). This option may be specified more than
+	// once, in which case the filter masks are merged. If the empty string is assigned, the filter is
+	// reset, all prior assignments will have no effect.
+	//
+	// Commands prefixed with + are not subject to filtering. The <function>execve()</function>,
+	// <function>exit()</function>, <function>exit_group()</function>, <function>getrlimit()</function>,
+	// <function>rt_sigreturn()</function>, <function>sigreturn()</function> system calls and the system
+	// calls for querying time and sleeping are implicitly allow-listed and do not need to be listed
+	// explicitly.
+	//
+	// The default action when a system call is denied is to terminate the processes with a SIGSYS signal.
+	// This can changed using SystemCallErrorNumber=, see below. In addition, deny-listed system calls and
+	// system call groups may optionally be suffixed with a colon (:) and an argument in the same format as
+	// SystemCallErrorNumber=, to take this action when the matching system call is made. This takes
+	// precedence over the action specified in SystemCallErrorNumber=.
+	//
+	// This feature makes use of the Secure Computing Mode 2 interfaces of the kernel ('seccomp filtering')
+	// and is useful for enforcing a minimal sandboxing environment.
+	//
+	// Note that on systems supporting multiple ABIs (such as x86/x86-64) it is recommended to turn off
+	// alternative ABIs for services, so that they cannot be used to circumvent the restrictions of this
+	// option. Specifically, it is recommended to combine this option with SystemCallArchitectures=native
+	// or similar.
+	//
+	// Note that strict system call filters may impact execution and error handling code paths of the
+	// service invocation. Specifically, access to the <function>execve()</function> system call is
+	// required for the execution of the service binary — if it is blocked service invocation will
+	// necessarily fail. Also, if execution of the service binary fails for some reason (for example:
+	// missing service executable), the error handling logic might require access to an additional set of
+	// system calls in order to process and log this failure correctly. It might be necessary to
+	// temporarily disable system call filters in order to allow debugging of such failures.
+	//
+	// If you specify both types of this option (i.e. allow-listing and deny-listing), the first
+	// encountered will take precedence and will dictate the default action (termination or approval of a
+	// system call). Then the next occurrences of this option will add or delete the listed system calls
+	// from the set of the filtered system calls, depending of its type and the default action. (For
+	// example, if you have started with an allow list rule for <function>read()</function> and
+	// <function>write()</function>, and right after it add a deny list rule for
+	// <function>write()</function>, then <function>write()</function> will be removed from the set.)
+	//
+	// As the number of possible system calls is large, predefined groups of system calls are provided. A
+	// group starts with @ character, followed by name of the set. <table> <title>Currently predefined
+	// system call sets</title> <tgroup cols='2'> <colspec colname='set' /> <colspec colname='description'
+	// /> <thead> <row> <entry>Set</entry> <entry>Description</entry> </row> </thead> <tbody> <row>
+	// <entry>@aio</entry> <entry>Asynchronous I/O (<citerefentry
+	// project='man-pages'><refentrytitle>io_setup</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>io_submit</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// and related calls)</entry> </row> <row> <entry>@basic-io</entry> <entry>System calls for basic I/O:
+	// reading, writing, seeking, file descriptor duplication and closing (<citerefentry
+	// project='man-pages'><refentrytitle>read</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>write</refentrytitle><manvolnum>2</manvolnum></citerefentry>, and
+	// related calls)</entry> </row> <row> <entry>@chown</entry> <entry>Changing file ownership
+	// (<citerefentry
+	// project='man-pages'><refentrytitle>chown</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>fchownat</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// and related calls)</entry> </row> <row> <entry>@clock</entry> <entry>System calls for changing the
+	// system clock (<citerefentry
+	// project='man-pages'><refentrytitle>adjtimex</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>settimeofday</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// and related calls)</entry> </row> <row> <entry>@cpu-emulation</entry> <entry>System calls for CPU
+	// emulation functionality (<citerefentry
+	// project='man-pages'><refentrytitle>vm86</refentrytitle><manvolnum>2</manvolnum></citerefentry> and
+	// related calls)</entry> </row> <row> <entry>@debug</entry> <entry>Debugging, performance monitoring
+	// and tracing functionality (<citerefentry
+	// project='man-pages'><refentrytitle>ptrace</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>perf_event_open</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// and related calls)</entry> </row> <row> <entry>@file-system</entry> <entry>File system operations:
+	// opening, creating files and directories for read and write, renaming and removing them, reading file
+	// properties, or creating hard and symbolic links</entry> </row> <row> <entry>@io-event</entry>
+	// <entry>Event loop system calls (<citerefentry
+	// project='man-pages'><refentrytitle>poll</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>select</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>epoll</refentrytitle><manvolnum>7</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>eventfd</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// and related calls)</entry> </row> <row> <entry>@ipc</entry> <entry>Pipes, SysV IPC, POSIX Message
+	// Queues and other IPC (<citerefentry
+	// project='man-pages'><refentrytitle>mq_overview</refentrytitle><manvolnum>7</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>svipc</refentrytitle><manvolnum>7</manvolnum></citerefentry>)</entry>
+	// </row> <row> <entry>@keyring</entry> <entry>Kernel keyring access (<citerefentry
+	// project='man-pages'><refentrytitle>keyctl</refentrytitle><manvolnum>2</manvolnum></citerefentry> and
+	// related calls)</entry> </row> <row> <entry>@memlock</entry> <entry>Locking of memory in RAM
+	// (<citerefentry
+	// project='man-pages'><refentrytitle>mlock</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>mlockall</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// and related calls)</entry> </row> <row> <entry>@module</entry> <entry>Loading and unloading of
+	// kernel modules (<citerefentry
+	// project='man-pages'><refentrytitle>init_module</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>delete_module</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// and related calls)</entry> </row> <row> <entry>@mount</entry> <entry>Mounting and unmounting of file
+	// systems (<citerefentry
+	// project='man-pages'><refentrytitle>mount</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>chroot</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// and related calls)</entry> </row> <row> <entry>@network-io</entry> <entry>Socket I/O (including
+	// local AF_UNIX): <citerefentry
+	// project='man-pages'><refentrytitle>socket</refentrytitle><manvolnum>7</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>unix</refentrytitle><manvolnum>7</manvolnum></citerefentry></entry>
+	// </row> <row> <entry>@obsolete</entry> <entry>Unusual, obsolete or unimplemented (<citerefentry
+	// project='man-pages'><refentrytitle>create_module</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>gtty</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// …)</entry> </row> <row> <entry>@pkey</entry> <entry>System calls that deal with memory protection
+	// keys (<citerefentry
+	// project='man-pages'><refentrytitle>pkeys</refentrytitle><manvolnum>7</manvolnum></citerefentry>)</entry>
+	// </row> <row> <entry>@privileged</entry> <entry>All system calls which need super-user capabilities
+	// (<citerefentry
+	// project='man-pages'><refentrytitle>capabilities</refentrytitle><manvolnum>7</manvolnum></citerefentry>)</entry>
+	// </row> <row> <entry>@process</entry> <entry>Process control, execution, namespacing operations
+	// (<citerefentry
+	// project='man-pages'><refentrytitle>clone</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>kill</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>namespaces</refentrytitle><manvolnum>7</manvolnum></citerefentry>,
+	// …)</entry> </row> <row> <entry>@raw-io</entry> <entry>Raw I/O port access (<citerefentry
+	// project='man-pages'><refentrytitle>ioperm</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>iopl</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <function>pciconfig_read()</function>, …)</entry> </row> <row> <entry>@reboot</entry>
+	// <entry>System calls for rebooting and reboot preparation (<citerefentry
+	// project='man-pages'><refentrytitle>reboot</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <function>kexec()</function>, …)</entry> </row> <row> <entry>@resources</entry> <entry>System
+	// calls for changing resource limits, memory and scheduling parameters (<citerefentry
+	// project='man-pages'><refentrytitle>setrlimit</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>setpriority</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// …)</entry> </row> <row> <entry>@sandbox</entry> <entry>System calls for sandboxing programs
+	// (<citerefentry
+	// project='man-pages'><refentrytitle>seccomp</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// Landlock system calls, …)</entry> </row> <row> <entry>@setuid</entry> <entry>System calls for
+	// changing user ID and group ID credentials, (<citerefentry
+	// project='man-pages'><refentrytitle>setuid</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>setgid</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>setresuid</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// …)</entry> </row> <row> <entry>@signal</entry> <entry>System calls for manipulating and handling
+	// process signals (<citerefentry
+	// project='man-pages'><refentrytitle>signal</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>sigprocmask</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// …)</entry> </row> <row> <entry>@swap</entry> <entry>System calls for enabling/disabling swap
+	// devices (<citerefentry
+	// project='man-pages'><refentrytitle>swapon</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>swapoff</refentrytitle><manvolnum>2</manvolnum></citerefentry>)</entry>
+	// </row> <row> <entry>@sync</entry> <entry>Synchronizing files and memory to disk (<citerefentry
+	// project='man-pages'><refentrytitle>fsync</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>msync</refentrytitle><manvolnum>2</manvolnum></citerefentry>, and
+	// related calls)</entry> </row> <row> <entry>@system-service</entry> <entry>A reasonable set of system
+	// calls used by common system services, excluding any special purpose calls. This is the recommended
+	// starting point for allow-listing system calls for system services, as it contains what is typically
+	// needed by system services, but excludes overly specific interfaces. For example, the following APIs
+	// are excluded: @clock, @mount, @swap, @reboot.</entry> </row> <row> <entry>@timer</entry>
+	// <entry>System calls for scheduling operations by time (<citerefentry
+	// project='man-pages'><refentrytitle>alarm</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <citerefentry
+	// project='man-pages'><refentrytitle>timer_create</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// …)</entry> </row> <row> <entry>@known</entry> <entry>All system calls defined by the kernel. This
+	// list is defined statically in systemd based on a kernel version that was available when this systemd
+	// version was released. It will become progressively more out-of-date as the kernel is
+	// updated.</entry> </row> </tbody> </tgroup> </table> Note, that as new system calls are added to the
+	// kernel, additional system calls might be added to the groups above. Contents of the sets may also
+	// change between systemd versions. In addition, the list of system calls depends on the kernel version
+	// and architecture for which systemd was compiled. Use systemd-analyze syscall-filter to list the
+	// actual list of system calls in each filter.
+	//
+	// Generally, allow-listing system calls (rather than deny-listing) is the safer mode of operation. It
+	// is recommended to enforce system call allow lists for all long-running system services.
+	// Specifically, the following lines are a relatively safe basic choice for the majority of system
+	// services:
+	//
+	// Note that various kernel system calls are defined redundantly: there are multiple system calls for
+	// executing the same operation. For example, the <function>pidfd_send_signal()</function> system call
+	// may be used to execute operations similar to what can be done with the older
+	// <function>kill()</function> system call, hence blocking the latter without the former only provides
+	// weak protection. Since new system calls are added regularly to the kernel as development progresses,
+	// keeping system call deny lists comprehensive requires constant work. It is thus recommended to use
+	// allow-listing instead, which offers the benefit that new system calls are by default implicitly
+	// blocked until the allow list is updated.
+	//
+	// Also note that a number of system calls are required to be accessible for the dynamic linker to
+	// work. The dynamic linker is required for running most regular programs (specifically: all dynamic
+	// ELF binaries, which is how most distributions build packaged programs). This means that blocking
+	// these system calls (which include <function>open()</function>, <function>openat()</function> or
+	// <function>mmap()</function>) will make most programs typically shipped with generic distributions
+	// unusable.
+	//
+	// It is recommended to combine the file system namespacing related options with
+	// SystemCallFilter=~@mount, in order to prohibit the unit's processes to undo the mappings.
+	// Specifically these are the options PrivateTmp=, PrivateDevices=, ProtectSystem=, ProtectHome=,
+	// ProtectKernelTunables=, ProtectControlGroups=, ProtectKernelLogs=, ProtectClock=, ReadOnlyPaths=,
+	// InaccessiblePaths= and ReadWritePaths=.
+	//
+	SystemCallFilter []string `hcl:"system_call_filter,optional" systemd:"SystemCallFilter"`
+	// Takes a space-separated list of system call names. If this setting is used, all system calls
+	// executed by the unit processes for the listed ones will be logged. If the first character of the
+	// list is ~, the effect is inverted: all system calls except the listed system calls will be logged.
+	// This feature makes use of the Secure Computing Mode 2 interfaces of the kernel ('seccomp filtering')
+	// and is useful for auditing or setting up a minimal sandboxing environment. This option may be
+	// specified more than once, in which case the filter masks are merged. If the empty string is
+	// assigned, the filter is reset, all prior assignments will have no effect. This does not affect
+	// commands prefixed with +.
+	SystemCallLog []string `hcl:"system_call_log,optional" systemd:"SystemCallLog"`
+	// Configure the size of the TTY specified with TTYPath=. If unset or set to the empty string, it is
+	// attempted to retrieve the dimensions of the terminal screen via ANSI sequences, and if that fails
+	// the kernel defaults (typically 80x24) are used.
+	TTYColumns uint64 `hcl:"tty_columns,optional" systemd:"TTYColumns"`
+	// Sets the terminal device node to use if standard input, output, or error are connected to a TTY (see
+	// above). Defaults to /dev/console.
+	TTYPath string `hcl:"tty_path,optional" systemd:"TTYPath"`
+	// Reset the terminal device specified with TTYPath= before and after execution. This does not erase
+	// the screen (see TTYVTDisallocate= below for that). Defaults to no.
+	TTYReset bool `hcl:"tty_reset,optional" systemd:"TTYReset"`
+	// Configure the size of the TTY specified with TTYPath=. If unset or set to the empty string, it is
+	// attempted to retrieve the dimensions of the terminal screen via ANSI sequences, and if that fails
+	// the kernel defaults (typically 80x24) are used.
+	TTYRows uint64 `hcl:"tty_rows,optional" systemd:"TTYRows"`
+	// Disconnect all clients which have opened the terminal device specified with TTYPath= before and
+	// after execution. Defaults to no.
+	TTYVHangup bool `hcl:"ttyv_hangup,optional" systemd:"TTYVHangup"`
+	// If the terminal device specified with TTYPath= is a virtual console terminal, try to deallocate the
+	// TTY before and after execution. This ensures that the screen and scrollback buffer is cleared. If
+	// the terminal device is of any other type of TTY an attempt is made to clear the screen via ANSI
+	// sequences. Defaults to no.
+	TTYVTDisallocate bool   `hcl:"ttyvt_disallocate,optional" systemd:"TTYVTDisallocate"`
+	TasksAccounting  bool   `hcl:"tasks_accounting,optional" systemd:"TasksAccounting"`
+	TasksMax         string `hcl:"tasks_max,optional" systemd:"TasksMax"`
+	// Takes a space-separated list of mount points for temporary file systems (tmpfs). If set, a new file
+	// system namespace is set up for executed processes, and a temporary file system is mounted on each
+	// mount point. This option may be specified more than once, in which case temporary file systems are
+	// mounted on all listed mount points. If the empty string is assigned to this option, the list is
+	// reset, and all prior assignments have no effect. Each mount point may optionally be suffixed with a
+	// colon (:) and mount options such as size=10% or ro. By default, each temporary file system is
+	// mounted with nodev,strictatime,mode=0755. These can be disabled by explicitly specifying the
+	// corresponding mount options, e.g., dev or nostrictatime.
+	//
+	// This is useful to hide files or directories not relevant to the processes invoked by the unit, while
+	// necessary files or directories can be still accessed by combining with BindPaths= or
+	// BindReadOnlyPaths=:
+	//
+	// Example: if a unit has the following, <programlisting>TemporaryFileSystem=/var:ro
+	// BindReadOnlyPaths=/var/lib/systemd</programlisting> then the invoked processes by the unit cannot
+	// see any files or directories under /var/ except for /var/lib/systemd or its contents.
+	//
+	TemporaryFileSystem []string `hcl:"temporary_file_system,optional" systemd:"TemporaryFileSystem"`
+	// This option configures the time to wait for the service to terminate when it was aborted due to a
+	// watchdog timeout (see WatchdogSec=). If the service has a short TimeoutStopSec= this option can be
+	// used to give the system more time to write a core dump of the service. Upon expiration the service
+	// will be forcibly terminated by SIGKILL (see KillMode= in
+	// <citerefentry><refentrytitle>systemd.kill</refentrytitle><manvolnum>5</manvolnum></citerefentry>).
+	// The core file will be truncated in this case. Use TimeoutAbortSec= to set a sensible timeout for the
+	// core dumping per service that is large enough to write all expected data while also being short
+	// enough to handle the service failure in due time.
+	//
+	// Takes a unit-less value in seconds, or a time span value such as "5min 20s". Pass an empty value to
+	// skip the dedicated watchdog abort timeout handling and fall back TimeoutStopSec=. Pass infinity to
+	// disable the timeout logic. Defaults to DefaultTimeoutAbortSec= from the manager configuration file
+	// (see
+	// <citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>).
+	//
+	// If a service of Type=notify/Type=notify-reload handles SIGABRT itself (instead of relying on the
+	// kernel to write a core dump) it can send EXTEND_TIMEOUT_USEC=… to extended the abort time beyond
+	// TimeoutAbortSec=. The first receipt of this message must occur before TimeoutAbortSec= is exceeded,
+	// and once the abort time has extended beyond TimeoutAbortSec=, the service manager will allow the
+	// service to continue to abort, provided the service repeats EXTEND_TIMEOUT_USEC=… within the
+	// interval specified, or terminates itself (see
+	// <citerefentry><refentrytitle>sd_notify</refentrytitle><manvolnum>3</manvolnum></citerefentry>).
+	//
+	TimeoutAbortSec int `hcl:"timeout_abort_sec,optional" systemd:"TimeoutAbortSec"`
+	// Configures a timeout on the clean-up operation requested through systemctl clean …, see
+	// <citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>1</manvolnum></citerefentry> for
+	// details. Takes the usual time values and defaults to infinity, i.e. by default no timeout is
+	// applied. If a timeout is configured the clean operation will be aborted forcibly when the timeout is
+	// reached, potentially leaving resources on disk.
+	TimeoutCleanSec int `hcl:"timeout_clean_sec,optional" systemd:"TimeoutCleanSec"`
 	// A shorthand for configuring both TimeoutStartSec= and TimeoutStopSec= to the specified value.
 	TimeoutSec int `hcl:"timeout_sec,optional" systemd:"TimeoutSec"`
 	// These options configure the action that is taken in case a daemon service does not signal start-up
@@ -450,7 +3579,7 @@ type ServiceBlock struct {
 	// using kill the service is immediately terminated by sending FinalKillSignal= without any further
 	// timeout. This setting can be used to expedite the shutdown of failing services.
 	//
-	TimeoutStartFailureMode string `hcl:"timeout_start_failure_mode,optional" systemd:"TimeoutStartFailureMode"`
+	TimeoutStartFailureMode int `hcl:"timeout_start_failure_mode,optional" systemd:"TimeoutStartFailureMode"`
 	// Configures the time to wait for start-up. If a daemon service does not signal start-up completion
 	// within the configured time, the service will be considered failed and will be shut down again. The
 	// precise action depends on the TimeoutStartFailureMode= option. Takes a unit-less value in seconds,
@@ -487,7 +3616,33 @@ type ServiceBlock struct {
 	// using kill the service is immediately terminated by sending FinalKillSignal= without any further
 	// timeout. This setting can be used to expedite the shutdown of failing services.
 	//
-	TimeoutStopFailureMode string `hcl:"timeout_stop_failure_mode,optional" systemd:"TimeoutStopFailureMode"`
+	TimeoutStopFailureMode int `hcl:"timeout_stop_failure_mode,optional" systemd:"TimeoutStopFailureMode"`
+	// This option serves two purposes. First, it configures the time to wait for each ExecStop= command.
+	// If any of them times out, subsequent ExecStop= commands are skipped and the service will be
+	// terminated by SIGTERM. If no ExecStop= commands are specified, the service gets the SIGTERM
+	// immediately. This default behavior can be changed by the TimeoutStopFailureMode= option. Second, it
+	// configures the time to wait for the service itself to stop. If it does not terminate in the
+	// specified time, it will be forcibly terminated by SIGKILL (see KillMode= in
+	// <citerefentry><refentrytitle>systemd.kill</refentrytitle><manvolnum>5</manvolnum></citerefentry>).
+	// Takes a unit-less value in seconds, or a time span value such as "5min 20s". Pass infinity to
+	// disable the timeout logic. Defaults to DefaultTimeoutStopSec= from the manager configuration file
+	// (see
+	// <citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>).
+	//
+	// If a service of Type=notify/Type=notify-reload sends EXTEND_TIMEOUT_USEC=…, this may cause the
+	// stop time to be extended beyond TimeoutStopSec=. The first receipt of this message must occur before
+	// TimeoutStopSec= is exceeded, and once the stop time has extended beyond TimeoutStopSec=, the service
+	// manager will allow the service to continue to stop, provided the service repeats
+	// EXTEND_TIMEOUT_USEC=… within the interval specified, or terminates itself (see
+	// <citerefentry><refentrytitle>sd_notify</refentrytitle><manvolnum>3</manvolnum></citerefentry>).
+	//
+	TimeoutStopSec int `hcl:"timeout_stop_sec,optional" systemd:"TimeoutStopSec"`
+	// Sets the timer slack in nanoseconds for the executed processes. The timer slack controls the
+	// accuracy of wake-ups triggered by timers. See
+	// <citerefentry><refentrytitle>prctl</refentrytitle><manvolnum>2</manvolnum></citerefentry> for more
+	// information. Note that in contrast to most other time span definitions this parameter takes an
+	// integer value in nano-seconds if no unit is specified. The usual time units are understood too.
+	TimerSlackNSec int `hcl:"timer_slack_n_sec,optional" systemd:"TimerSlackNSec"`
 	// Configures the mechanism via which the service notifies the manager that the service start-up has
 	// finished. One of simple, exec, forking, oneshot, dbus, notify, notify-reload, or idle:
 	//
@@ -518,6 +3673,19 @@ type ServiceBlock struct {
 	// proceeding.
 	//
 	Type string `hcl:"type,optional" systemd:"Type"`
+	// Controls the file mode creation mask. Takes an access mode in octal notation. See
+	// <citerefentry><refentrytitle>umask</refentrytitle><manvolnum>2</manvolnum></citerefentry> for
+	// details. Defaults to 0022 for system units. For user units the default value is inherited from the
+	// per-user service manager (whose default is in turn inherited from the system service manager, and
+	// thus typically also is 0022 — unless overridden by a PAM module). In order to change the per-user
+	// mask for all user services, consider setting the UMask= setting of the user's user@.service system
+	// service instance. The per-user umask may also be set via the umask field of a user's <ulink
+	// url="https://systemd.io/USER_RECORD">JSON User Record</ulink> (for users managed by
+	// <citerefentry><refentrytitle>systemd-homed.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>
+	// this field may be controlled via homectl --umask=). It may also be set via a PAM module, such as
+	// <citerefentry
+	// project='man-pages'><refentrytitle>pam_umask</refentrytitle><manvolnum>8</manvolnum></citerefentry>.
+	UMask os.FileMode `unitd:"u_mask,optional" systemd:"UMask"`
 	// Configure the location of a file containing <ulink
 	// url="https://docs.kernel.org/usb/functionfs.html">USB FunctionFS</ulink> descriptors, for
 	// implementation of USB gadget functions. This is used only in conjunction with a socket unit with
@@ -527,6 +3695,89 @@ type ServiceBlock struct {
 	// Configure the location of a file containing USB FunctionFS strings. Behavior is similar to
 	// USBFunctionDescriptors= above.
 	USBFunctionStrings string `hcl:"usb_function_strings,optional" systemd:"USBFunctionStrings"`
+	// Explicitly unset environment variable assignments that would normally be passed from the service
+	// manager to invoked processes of this unit. Takes a space-separated list of variable names or
+	// variable assignments. This option may be specified more than once, in which case all listed
+	// variables/assignments will be unset. If the empty string is assigned to this option, the list of
+	// environment variables/assignments to unset is reset. If a variable assignment is specified (that is:
+	// a variable name, followed by =, followed by its value), then any environment variable matching this
+	// precise assignment is removed. If a variable name is specified (that is a variable name without any
+	// following = or value), then any assignment matching the variable name, regardless of its value is
+	// removed. Note that the effect of UnsetEnvironment= is applied as final step when the environment
+	// list passed to executed processes is compiled. That means it may undo assignments from any
+	// configuration source, including assignments made through Environment= or EnvironmentFile=, inherited
+	// from the system manager's global set of environment variables, inherited via PassEnvironment=, set
+	// by the service manager itself (such as $NOTIFY_SOCKET and such), or set by a PAM module (in case
+	// PAMName= is used).
+	//
+	// See "Environment Variables in Spawned Processes" below for a description of how those settings
+	// combine to form the inherited environment. See <citerefentry
+	// project='man-pages'><refentrytitle>environ</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// for general information about environment variables.
+	//
+	UnsetEnvironment []string `hcl:"unset_environment,optional" systemd:"UnsetEnvironment"`
+	// Set the UNIX user or group that the processes are executed as, respectively. Takes a single user or
+	// group name, or a numeric ID as argument. For system services (services run by the system service
+	// manager, i.e. managed by PID 1) and for user services of the root user (services managed by root's
+	// instance of systemd --user), the default is root, but User= may be used to specify a different user.
+	// For user services of any other user, switching user identity is not permitted, hence the only valid
+	// setting is the same user the user's service manager is running as. If no group is set, the default
+	// group of the user is used. This setting does not affect commands whose command line is prefixed with
+	// +.
+	//
+	// Note that this enforces only weak restrictions on the user/group name syntax, but will generate
+	// warnings in many cases where user/group names do not adhere to the following rules: the specified
+	// name should consist only of the characters a-z, A-Z, 0-9, _ and -, except for the first character
+	// which must be one of a-z, A-Z and _ (i.e. digits and - are not permitted as first character). The
+	// user/group name must have at least one character, and at most 31. These restrictions are made in
+	// order to avoid ambiguities and to ensure user/group names and unit files remain portable among Linux
+	// systems. For further details on the names accepted and the names warned about see <ulink
+	// url="https://systemd.io/USER_NAMES">User/Group Name Syntax</ulink>.
+	//
+	// When used in conjunction with DynamicUser= the user/group name specified is dynamically allocated at
+	// the time the service is started, and released at the time the service is stopped — unless it is
+	// already allocated statically (see below). If DynamicUser= is not used the specified user and group
+	// must have been created statically in the user database no later than the moment the service is
+	// started, for example using the
+	// <citerefentry><refentrytitle>sysusers.d</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// facility, which is applied at boot or package install time. If the user does not exist by then
+	// program invocation will fail.
+	//
+	// If the User= setting is used the supplementary group list is initialized from the specified user's
+	// default group list, as defined in the system's user and group database. Additional groups may be
+	// configured through the SupplementaryGroups= setting (see below).
+	//
+	User string `hcl:"user,optional" systemd:"User"`
+	// Takes an absolute file system path referring to a Linux user namespace pseudo-file (i.e. a file like
+	// /proc/$PID/ns/user or a bind mount or symlink to one). When set the invoked processes are added to
+	// the user namespace referenced by that path. The path has to point to a valid namespace file at the
+	// moment the processes are forked off. If this option is used PrivateUsers= has no effect.
+	//
+	// This option is only available for system services.
+	//
+	UserNamespacePath string `hcl:"user_namespace_path,optional" systemd:"UserNamespacePath"`
+	// Takes a four character identifier string for an <citerefentry
+	// project='man-pages'><refentrytitle>utmp</refentrytitle><manvolnum>5</manvolnum></citerefentry> and
+	// wtmp entry for this service. This should only be set for services such as getty implementations
+	// (such as <citerefentry
+	// project='die-net'><refentrytitle>agetty</refentrytitle><manvolnum>8</manvolnum></citerefentry>)
+	// where utmp/wtmp entries must be created and cleared before and after execution, or for services that
+	// shall be executed as if they were run by a getty process (see below). If the configured string is
+	// longer than four characters, it is truncated and the terminal four characters are used. This setting
+	// interprets %I style string replacements. This setting is unset by default, i.e. no utmp/wtmp entries
+	// are created or cleaned up for this service.
+	UtmpIdentifier string `hcl:"utmp_identifier,optional" systemd:"UtmpIdentifier"`
+	// Takes one of init, login or user. If UtmpIdentifier= is set, controls which type of <citerefentry
+	// project='man-pages'><refentrytitle>utmp</refentrytitle><manvolnum>5</manvolnum></citerefentry>/wtmp
+	// entries for this service are generated. This setting has no effect unless UtmpIdentifier= is set
+	// too. If init is set, only an INIT_PROCESS entry is generated and the invoked process must implement
+	// a getty-compatible utmp/wtmp logic. If login is set, first an INIT_PROCESS entry, followed by a
+	// LOGIN_PROCESS entry is generated. In this case, the invoked process must implement a <citerefentry
+	// project='die-net'><refentrytitle>login</refentrytitle><manvolnum>1</manvolnum></citerefentry>-compatible
+	// utmp/wtmp logic. If user is set, first an INIT_PROCESS entry, then a LOGIN_PROCESS entry and finally
+	// a USER_PROCESS entry is generated. In this case, the invoked process may be any process that is
+	// suitable to be run as session leader. Defaults to init.
+	UtmpMode string `hcl:"utmp_mode,optional" systemd:"UtmpMode"`
 	// Configures the watchdog timeout for a service. The watchdog is activated when the start-up is
 	// completed. The service must call
 	// <citerefentry><refentrytitle>sd_notify</refentrytitle><manvolnum>3</manvolnum></citerefentry>
@@ -545,6 +3796,18 @@ type ServiceBlock struct {
 	// <citerefentry><refentrytitle>sd_event_set_watchdog</refentrytitle><manvolnum>3</manvolnum></citerefentry>
 	// may be used to enable automatic watchdog notification support.
 	WatchdogSec int `hcl:"watchdog_sec,optional" systemd:"WatchdogSec"`
+	// Specifies which signal to use to terminate the service when the watchdog timeout expires (enabled
+	// through WatchdogSec=). Defaults to SIGABRT.
+	WatchdogSignal syscall.Signal `unitd:"watchdog_signal,optional" systemd:"WatchdogSignal"`
+	// Takes a directory path relative to the service's root directory specified by RootDirectory=, or the
+	// special value ~. Sets the working directory for executed processes. If set to ~, the home directory
+	// of the user specified in User= is used. If not set, defaults to the root directory when systemd is
+	// running as a system instance and the respective user's home directory if run as user. If the setting
+	// is prefixed with the - character, a missing working directory is not considered fatal. If
+	// RootDirectory=/RootImage= is not set, then WorkingDirectory= is relative to the root of the system
+	// running the service manager. Note that setting this parameter might result in additional
+	// dependencies to be added to the unit (see above).
+	WorkingDirectory string `hcl:"working_directory,optional" systemd:"WorkingDirectory"`
 }
 
 type Service struct {

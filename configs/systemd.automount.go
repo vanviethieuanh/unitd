@@ -36,6 +36,10 @@ type AutomountBlock struct {
 	// options. This setting is optional. Note that the usual specifier expansion is applied to this
 	// setting, literal percent characters should hence be written as <literal class='specifiers'>%%.
 	ExtraOptions string `hcl:"extra_options,optional" systemd:"ExtraOptions"`
+	// Configures an idle timeout. Once the mount has been idle for the specified time, systemd will
+	// attempt to unmount. Takes a unit-less value in seconds, or a time span value such as "5min 20s".
+	// Pass 0 to disable the timeout logic. The timeout is disabled by default.
+	TimeoutIdleSec int `hcl:"timeout_idle_sec,optional" systemd:"TimeoutIdleSec"`
 	// Takes an absolute path of a directory of the automount point. If the automount point does not exist
 	// at time that the automount point is installed, it is created. This string must be reflected in the
 	// unit filename. (See above.) This option is mandatory.

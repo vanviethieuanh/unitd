@@ -55,6 +55,7 @@ type UnitBlock struct {
 	Before                          []hcl.Traversal `unitd:"before,optional" systemd:"Before"`
 	BindTo                          []hcl.Traversal `unitd:"bind_to,optional" systemd:"BindTo"`
 	BindsTo                         []hcl.Traversal `unitd:"binds_to,optional" systemd:"BindsTo"`
+	CollectMode                     string          `hcl:"collect_mode,optional" systemd:"CollectMode"`
 	ConditionACPower                string          `hcl:"condition_ac_power,optional" systemd:"ConditionACPower"`
 	ConditionArchitecture           string          `hcl:"condition_architecture,optional" systemd:"ConditionArchitecture"`
 	ConditionCPUFeature             string          `hcl:"condition_cpu_feature,optional" systemd:"ConditionCPUFeature"`
@@ -96,8 +97,12 @@ type UnitBlock struct {
 	Description                     string          `hcl:"description,optional" systemd:"Description"`
 	Documentation                   string          `hcl:"documentation,optional" systemd:"Documentation"`
 	FailureAction                   string          `hcl:"failure_action,optional" systemd:"FailureAction"`
+	FailureActionExitStatus         []string        `hcl:"failure_action_exit_status,optional" systemd:"FailureActionExitStatus"`
 	IgnoreOnIsolate                 bool            `hcl:"ignore_on_isolate,optional" systemd:"IgnoreOnIsolate"`
+	JobRunningTimeoutSec            int             `hcl:"job_running_timeout_sec,optional" systemd:"JobRunningTimeoutSec"`
 	JobTimeoutAction                string          `hcl:"job_timeout_action,optional" systemd:"JobTimeoutAction"`
+	JobTimeoutRebootArgument        string          `hcl:"job_timeout_reboot_argument,optional" systemd:"JobTimeoutRebootArgument"`
+	JobTimeoutSec                   int             `hcl:"job_timeout_sec,optional" systemd:"JobTimeoutSec"`
 	JoinsNamespaceOf                []hcl.Traversal `unitd:"joins_namespace_of,optional" systemd:"JoinsNamespaceOf"`
 	OnFailure                       []hcl.Traversal `unitd:"on_failure,optional" systemd:"OnFailure"`
 	OnFailureIsolate                bool            `hcl:"on_failure_isolate,optional" systemd:"OnFailureIsolate"`
@@ -109,6 +114,7 @@ type UnitBlock struct {
 	PropagateReloadTo               []hcl.Traversal `unitd:"propagate_reload_to,optional" systemd:"PropagateReloadTo"`
 	PropagatesReloadTo              []hcl.Traversal `unitd:"propagates_reload_to,optional" systemd:"PropagatesReloadTo"`
 	PropagatesStopTo                []hcl.Traversal `unitd:"propagates_stop_to,optional" systemd:"PropagatesStopTo"`
+	RebootArgument                  string          `hcl:"reboot_argument,optional" systemd:"RebootArgument"`
 	RefuseManualStart               bool            `hcl:"refuse_manual_start,optional" systemd:"RefuseManualStart"`
 	RefuseManualStop                bool            `hcl:"refuse_manual_stop,optional" systemd:"RefuseManualStop"`
 	ReloadPropagatedFrom            []hcl.Traversal `unitd:"reload_propagated_from,optional" systemd:"ReloadPropagatedFrom"`
@@ -123,6 +129,7 @@ type UnitBlock struct {
 	StopPropagatedFrom              []hcl.Traversal `unitd:"stop_propagated_from,optional" systemd:"StopPropagatedFrom"`
 	StopWhenUnneeded                bool            `hcl:"stop_when_unneeded,optional" systemd:"StopWhenUnneeded"`
 	SuccessAction                   string          `hcl:"success_action,optional" systemd:"SuccessAction"`
+	SuccessActionExitStatus         []string        `hcl:"success_action_exit_status,optional" systemd:"SuccessActionExitStatus"`
 	SurviveFinalKillSignal          bool            `hcl:"survive_final_kill_signal,optional" systemd:"SurviveFinalKillSignal"`
 	Upholds                         []hcl.Traversal `unitd:"upholds,optional" systemd:"Upholds"`
 	Wants                           []hcl.Traversal `unitd:"wants,optional" systemd:"Wants"`

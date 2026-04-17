@@ -57,15 +57,16 @@ func loadGperfDirectives(dir string, parserMap map[string]string) ([]Directive, 
 				return nil, fmt.Errorf("unmarshal %s: %w", path, err)
 			}
 
-			typeStr, ok := parserMap[gr.Parser]
+			typeStr, ok := "", false
+			if gr.Parser == "NULL" {
+				typeStr, ok = nullParserTypes[gr.Property]
+			}
 			if !ok {
-				if gr.Parser == "NULL" {
-					typeStr, ok = nullParserTypes[gr.Property]
-				}
-				if !ok {
-					log.Warnf("unknown parser %q in %s — skipping", gr.Parser, filepath.Base(path))
-					continue
-				}
+				typeStr, ok = parserMap[gr.Parser]
+			}
+			if !ok {
+				log.Warnf("unknown parser %q in %s — skipping", gr.Parser, filepath.Base(path))
+				continue
 			}
 
 			// parsers mapped to empty type string are intentionally unsupported
