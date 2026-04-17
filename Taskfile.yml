@@ -11,8 +11,17 @@ env:
 
 tasks:
   default:
+    desc: Compile example HCL and compare with expected output
     cmds:
-      - go run .
+      - mkdir -p tmp/test-output
+      - defer: rm -rf tmp/test-output
+      - go run . ./example/src/services.hcl ./tmp/test-output
+      - |
+        for f in example/transplied/*.service; do
+          name=$(basename "$f")
+          diff -u "$f" "tmp/test-output/$name"
+        done
+        echo "PASS: all outputs match expected"
 
   clone-or-pull-systemd:
     desc: Clone systemd repo if it doesn't exist, otherwise pull latest changes

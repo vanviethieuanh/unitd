@@ -1,7 +1,9 @@
 service "nginx" {
   unit {
     description = "NGINX Web"
-    after = ["network.target"]
+
+    after   = [builtin.target.network, service.db]
+    wants   = [builtin.target.network_online]
   }
 
   service {
@@ -10,6 +12,22 @@ service "nginx" {
   }
 
   install {
-    wanted_by = ["multi-user.target"]
+    wanted_by = [builtin.target.multi_user]
+  }
+}
+
+service "db" {
+  unit {
+    description = "Database"
+
+    after = [builtin.target.network]
+  }
+
+  service {
+    exec_start = "/usr/bin/db-server"
+  }
+
+  install {
+    wanted_by = [builtin.target.multi_user]
   }
 }

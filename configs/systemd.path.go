@@ -4,7 +4,6 @@
 package configs
 
 import (
-	"github.com/hashicorp/hcl/v2"
 	"os"
 )
 
@@ -192,7 +191,7 @@ type PathBlock struct {
 	// suffix is not .path. If not specified, this value defaults to a service that has the same name as
 	// the path unit, except for the suffix. (See above.) It is recommended that the unit name that is
 	// activated and the unit name of the path unit are named identical, except for the suffix.
-	Unit hcl.Traversal `unitd:"unit,optional" systemd:"Unit"`
+	Unit string `hcl:"unit,optional" unitd:"ref=unit" systemd:"Unit"`
 }
 
 type Path struct {

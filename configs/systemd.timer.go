@@ -4,7 +4,6 @@
 package configs
 
 import (
-	"github.com/hashicorp/hcl/v2"
 	"time"
 )
 
@@ -195,7 +194,7 @@ type TimerBlock struct {
 	// .timer. If not specified, this value defaults to a service that has the same name as the timer unit,
 	// except for the suffix. (See above.) It is recommended that the unit name that is activated and the
 	// unit name of the timer unit are named identically, except for the suffix.
-	Unit hcl.Traversal `unitd:"unit,optional" systemd:"Unit"`
+	Unit string `hcl:"unit,optional" unitd:"ref=unit" systemd:"Unit"`
 	// Takes a boolean argument. If true, an elapsing timer will cause the system to resume from suspend,
 	// should it be suspended and if the system supports this. Note that this option will only make sure
 	// the system resumes on the appropriate times, it will not take care of suspending it again after any

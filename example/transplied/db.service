@@ -1,0 +1,9 @@
+[Unit]
+After=network.target
+Description=Database
+
+[Service]
+ExecStart=/usr/bin/db-server
+
+[Install]
+WantedBy=multi-user.target

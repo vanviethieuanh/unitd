@@ -42,6 +42,16 @@ class ValueType(StrEnum):
     URL = "URL"
     IOCLASS = "IOCLASS"
 
+    @property
+    def ref(self) -> str | None:
+        """Return the ref name for types that represent references, or None."""
+        return _REF_MAP.get(self)
+
+
+_REF_MAP: dict[ValueType, str] = {
+    ValueType.UNIT: "unit",
+}
+
 
 _GO_TYPE_MAP: dict[ValueType, tuple[str, list[str]]] = {
     ValueType.ACCESS: ("string", []),
@@ -59,7 +69,7 @@ _GO_TYPE_MAP: dict[ValueType, tuple[str, list[str]]] = {
     ValueType.STRING: ("string", []),
     ValueType.TIMEOUTMODE: ("string", []),
     ValueType.URL: ("string", []),
-    ValueType.UNIT: ("hcl.Traversal", ["github.com/hashicorp/hcl/v2"]),
+    ValueType.UNIT: ("string", []),
     ValueType.BOOLEAN: ("bool", []),
     ValueType.INTEGER: ("int", []),
     ValueType.SECONDS: ("int", []),

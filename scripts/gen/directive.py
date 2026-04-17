@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .types import parse_type_expr
+from .types import ValueType, parse_type_expr
 from .util import to_pascal_case, to_snake_case, wrap_comment
 
 
@@ -22,6 +22,7 @@ class Directive:
     description: str = ""
     deps: list[str] = field(default_factory=list)
     native_type: bool = True
+    ref: str | None = None
 
 
 def new_directive(section: str, key: str, system: str, type_str: str) -> Directive:
@@ -35,6 +36,7 @@ def new_directive(section: str, key: str, system: str, type_str: str) -> Directi
         system=system,
         deps=deps,
         native_type=len(deps) == 0,
+        ref=parsed.base.ref,
     )
 
 
@@ -58,9 +60,10 @@ def write_directive(d: Directive) -> str:
     systemd_name = d.identifier.key
 
     if d.native_type:
-        lines.append(
-            f'\t{field_name} {d.type} `hcl:"{snake_name},optional" systemd:"{systemd_name}"`'
-        )
+        tag = f'hcl:"{snake_name},optional" systemd:"{systemd_name}"'
+        if d.ref:
+            tag = f'hcl:"{snake_name},optional" unitd:"ref={d.ref}" systemd:"{systemd_name}"'
+        lines.append(f"\t{field_name} {d.type} `{tag}`")
     else:
         lines.append(
             f'\t{field_name} {d.type} `unitd:"{snake_name},optional" systemd:"{systemd_name}"`'

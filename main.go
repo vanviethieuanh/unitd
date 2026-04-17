@@ -1,20 +1,26 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
-	"github.com/hashicorp/hcl/v2/hclsimple"
 	"github.com/vanviethieuanh/unitd/configs"
 )
 
 func main() {
-	outDir := "./example/transplied"
+	if len(os.Args) < 3 {
+		fmt.Fprintf(os.Stderr, "usage: unitd <src.hcl> <outdir>\n")
+		os.Exit(1)
+	}
+
+	srcFile := os.Args[1]
+	outDir := os.Args[2]
+
 	_ = os.MkdirAll(outDir, 0o755)
 
-	var config configs.Config
-
-	err := hclsimple.DecodeFile("./example/src/services.hcl", nil, &config)
+	config, err := configs.DecodeFile(srcFile)
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %s", err)
 	}
@@ -23,20 +29,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// for _, service := range config.Services {
-	// 	u, err := service.Encode()
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	//
-	// 	s := u.ToString()
-	//
-	// 	path := filepath.Join(outDir, service.Name+".service")
-	//
-	// 	if err := os.WriteFile(path, []byte(s), 0o644); err != nil {
-	// 		panic(err)
-	// 	}
-	//
-	// 	fmt.Println("wrote", path)
-	// }
+	for _, svc := range config.Services {
+		content, err := svc.Encode()
+		if err != nil {
+			log.Fatalf("Failed to encode %s: %s", svc.Name, err)
+		}
+
+		path := filepath.Join(outDir, svc.Name+".service")
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			log.Fatalf("Failed to write %s: %s", path, err)
+		}
+
+		fmt.Println("wrote", path)
+	}
 }

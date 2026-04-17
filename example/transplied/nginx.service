@@ -1,6 +1,8 @@
 [Unit]
-Description=NGINX Web
 After=network.target
+After=db.service
+Description=NGINX Web
+Wants=network-online.target
 
 [Service]
 ExecStart=/usr/sbin/nginx -g 'daemon off;'
