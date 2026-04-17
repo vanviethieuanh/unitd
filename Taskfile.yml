@@ -56,6 +56,7 @@ tasks:
         task: gen-file
         vars:
           MAN: "{{ .ITEM }}"
+      - gen-known-units
     cmds:
       - gofmt -w .
 
@@ -65,6 +66,11 @@ tasks:
       SHARED_MAN_FLAGS: '{{range .SHARED_MAN_FILES}}--shared-man {{.}} {{end}}'
     cmds:
       - $PYTHON -m scripts.gen --man {{.MAN}} {{.SHARED_MAN_FLAGS}} --log-level error > ./configs/{{.MAN}}.go
+
+  gen-known-units:
+    internal: true
+    cmds:
+      - $PYTHON -m scripts.gen --known-units --systemd-src {{.SYSTEMD_PATH}} --package configs --log-level error > ./configs/known_units.go
 
   test-gen:
     desc: Verify that scripts/gen produces identical output for the current systemd version
@@ -78,6 +84,7 @@ tasks:
         task: test-gen-file
         vars:
           MAN: "{{ .ITEM }}"
+      - task: test-gen-known-units
 
   test-gen-file:
     internal: true
@@ -87,6 +94,13 @@ tasks:
       - cmd: $PYTHON -m scripts.gen --man {{.MAN}} {{.SHARED_MAN_FLAGS}} --log-level error | gofmt > tmp/test-gen/{{.MAN}}.go
         silent: true
       - diff -u ./configs/{{.MAN}}.go tmp/test-gen/{{.MAN}}.go
+
+  test-gen-known-units:
+    internal: true
+    cmds:
+      - cmd: $PYTHON -m scripts.gen --known-units --systemd-src {{.SYSTEMD_PATH}} --package configs --log-level error | gofmt > tmp/test-gen/known_units.go
+        silent: true
+      - diff -u ./configs/known_units.go tmp/test-gen/known_units.go
 
   setup-python:
     desc: Set up Python venv in .venv and install dependencies

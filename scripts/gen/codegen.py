@@ -2,9 +2,22 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+import jinja2
+
 from .directive import Directive, generate_block_struct
-from .parser import Unit
+from .parser import KnownUnit, Unit
 from .util import to_pascal_case, to_snake_case, wrap_comment
+
+_TEMPLATES_DIR = Path(__file__).parent / "templates"
+
+_JINJA_ENV = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(str(_TEMPLATES_DIR)),
+    keep_trailing_newline=True,
+    lstrip_blocks=True,
+    trim_blocks=True,
+)
 
 
 def gen_common(pkg: str, directives: list[Directive]) -> str:
@@ -91,3 +104,29 @@ def _format_imports(packages: list[str]) -> str:
         out += f'\t"{p}"\n'
     out += ")\n"
     return out
+
+
+_KNOWN_UNITS_TEMPLATE = _JINJA_ENV.get_template("known_units.go.j2")
+
+
+def generate_known_units_code(
+    pkg: str,
+    special_units: list[KnownUnit],
+    shipped_units: list[KnownUnit],
+) -> str:
+    """Generate Go code for the known units registry."""
+    # Merge and deduplicate: special takes precedence over shipped
+    seen: set[str] = set()
+    all_units: list[KnownUnit] = []
+    for u in special_units:
+        if u.name not in seen:
+            seen.add(u.name)
+            all_units.append(u)
+    for u in shipped_units:
+        if u.name not in seen:
+            seen.add(u.name)
+            all_units.append(u)
+
+    all_units.sort(key=lambda u: u.name)
+
+    return _KNOWN_UNITS_TEMPLATE.render(pkg=pkg, units=all_units)

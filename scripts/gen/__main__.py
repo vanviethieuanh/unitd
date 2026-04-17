@@ -14,17 +14,18 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .codegen import gen_common, generate_unit_code, format_imports
+from .codegen import gen_common, generate_known_units_code, generate_unit_code, format_imports
 from .directive import Directive
 from .gperf import extract_all_gperfs, load_all_directives, load_parser_map
-from .parser import parse_applicable_types, parse_descriptions, parse_unit
+from .parser import parse_applicable_types, parse_descriptions, parse_special_units, parse_unit, scan_shipped_units
 
 log = logging.getLogger(__name__)
 
 
 def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser(description="Generate Go config structs from systemd data")
-    p.add_argument("--man", required=True, help="systemd man page name (e.g. systemd.timer)")
+    p.add_argument("--man", default=None, help="systemd man page name (e.g. systemd.timer)")
+    p.add_argument("--known-units", action="store_true", help="generate known units registry instead of config structs")
     p.add_argument(
         "--shared-man",
         action="append",
@@ -47,6 +48,15 @@ def main(argv: list[str] | None = None) -> None:
 
     systemd_src = Path(args.systemd_src)
     man_dir = Path(args.man_dir) if args.man_dir else systemd_src / "man"
+
+    if args.known_units:
+        code = _generate_known_units(man_dir, systemd_src / "units", args.package)
+        print(code, end="")
+        return
+
+    if not args.man:
+        p.error("--man is required when not using --known-units")
+
     debug_dir = Path("tmp/gperf") if args.debug else None
 
     python = sys.executable
@@ -185,6 +195,18 @@ def _generate_unit(
     code += unit_code
 
     return code
+
+
+def _generate_known_units(man_dir: Path, units_dir: Path, pkg: str) -> str:
+    """Generate the known units registry Go file."""
+    special_xml = man_dir / "systemd.special.xml"
+    special_units = parse_special_units(special_xml)
+    log.info("parsed %d special units from systemd.special.xml", len(special_units))
+
+    shipped_units = scan_shipped_units(units_dir)
+    log.info("scanned %d shipped units from %s", len(shipped_units), units_dir)
+
+    return generate_known_units_code(pkg, special_units, shipped_units)
 
 
 if __name__ == "__main__":

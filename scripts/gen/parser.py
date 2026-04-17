@@ -9,6 +9,12 @@ from pathlib import Path
 
 from .directive import Directive
 
+# Valid systemd unit file extensions (used by scan_shipped_units).
+_UNIT_EXTENSIONS = frozenset({
+    ".automount", ".device", ".mount", ".path", ".scope",
+    ".service", ".slice", ".socket", ".swap", ".target", ".timer",
+})
+
 
 @dataclass
 class Unit:
@@ -17,6 +23,15 @@ class Unit:
     purpose: str
     description: str
     options: list[Directive] = field(default_factory=list)
+
+
+@dataclass
+class KnownUnit:
+    """A well-known systemd unit name."""
+    name: str        # e.g. "multi-user.target"
+    unit_type: str   # e.g. "target"
+    is_template: bool  # True if name contains '@'
+    source: str      # "special" or "shipped"
 
 
 def parse_unit(
@@ -220,3 +235,87 @@ def _text_only(el: ET.Element) -> str:
         if child.tail:
             parts.append(child.tail)
     return "".join(parts)
+
+
+def _make_known_unit(name: str, source: str) -> KnownUnit | None:
+    """Build a KnownUnit from a unit name string, or None if invalid."""
+    idx = name.rfind(".")
+    if idx < 0:
+        return None
+    suffix = name[idx:]
+    if suffix not in _UNIT_EXTENSIONS:
+        return None
+    unit_type = suffix.lstrip(".")
+    is_template = "@" in name
+    return KnownUnit(name=name, unit_type=unit_type, is_template=is_template, source=source)
+
+
+def parse_special_units(path: Path) -> list[KnownUnit]:
+    """Extract known unit names from systemd.special.xml.
+
+    Parses both the <refsynopsisdiv> synopsis and the <variablelist>
+    entries in the body (which include a few units not in the synopsis).
+    """
+    tree = ET.parse(path)
+    root = tree.getroot()
+
+    seen: set[str] = set()
+    units: list[KnownUnit] = []
+
+    # 1) Synopsis: <refsynopsisdiv><para><filename>...</filename>
+    synopsis_div = root.find("refsynopsisdiv")
+    if synopsis_div is not None:
+        for fn in synopsis_div.iter("filename"):
+            name = "".join(fn.itertext()).strip()
+            if name and name not in seen:
+                ku = _make_known_unit(name, "special")
+                if ku:
+                    seen.add(name)
+                    units.append(ku)
+
+    # 2) Body: <variablelist><varlistentry><term><filename>...</filename>
+    for entry in root.iter("varlistentry"):
+        for term in entry.findall("term"):
+            fn = term.find("filename")
+            if fn is None:
+                continue
+            name = "".join(fn.itertext()).strip()
+            if name and name not in seen:
+                ku = _make_known_unit(name, "special")
+                if ku:
+                    seen.add(name)
+                    units.append(ku)
+
+    return units
+
+
+def scan_shipped_units(units_dir: Path) -> list[KnownUnit]:
+    """Scan the systemd units/ directory for shipped unit file names.
+
+    Handles .in files by stripping the .in suffix (they become real
+    units after build). Also scans the user/ subdirectory.
+    """
+    seen: set[str] = set()
+    units: list[KnownUnit] = []
+
+    dirs = [units_dir]
+    user_dir = units_dir / "user"
+    if user_dir.is_dir():
+        dirs.append(user_dir)
+
+    for d in dirs:
+        for p in sorted(d.iterdir()):
+            if not p.is_file():
+                continue
+            name = p.name
+            # Strip .in suffix — these are preprocessed into real units
+            if name.endswith(".in"):
+                name = name[:-3]
+            if name in seen:
+                continue
+            ku = _make_known_unit(name, "shipped")
+            if ku:
+                seen.add(name)
+                units.append(ku)
+
+    return units
