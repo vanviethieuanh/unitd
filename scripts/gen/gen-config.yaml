@@ -1,0 +1,33 @@
+# Configuration for the Go code generator (scripts/gen).
+
+# Path to the systemd source tree.
+systemd_src: tmp/systemd
+
+# Go package name for generated files.
+package: configs
+
+# Output directory for generated Go files.
+output_dir: ./configs
+
+# Unit man pages to generate config structs from.
+# Each entry produces a configs/systemd.<name>.go file.
+man_files:
+  - systemd.automount
+  - systemd.device
+  - systemd.mount
+  - systemd.path
+  - systemd.scope
+  - systemd.service
+  - systemd.slice
+  - systemd.socket
+  - systemd.swap
+  - systemd.timer
+  - systemd.target
+  - systemd.unit
+
+# Shared man pages checked for cross-unit applicability
+# (e.g. systemd.exec options that apply to .service, .socket, etc.)
+shared_man_files:
+  - systemd.exec
+  - systemd.kill
+  - systemd.resource-control

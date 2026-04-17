@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 """Generate Go config structs from systemd man pages and gperf data.
 
+Configuration is loaded from scripts/gen/gen-config.yaml.
+
 Usage:
-    python -m scripts.gen --man systemd.timer --systemd-src tmp/systemd --package configs
-    python -m scripts.gen --man systemd.unit  --systemd-src tmp/systemd --package configs
+    python -m scripts.gen
 """
 
 from __future__ import annotations
 
-import argparse
 import logging
 import subprocess
 import sys
 from pathlib import Path
+
+import yaml
 
 from .codegen import gen_common, generate_known_units_code, generate_unit_code, render_unit_file
 from .directive import Directive
@@ -21,118 +23,81 @@ from .parser import parse_applicable_types, parse_descriptions, parse_special_un
 
 log = logging.getLogger(__name__)
 
+_CONFIG_PATH = Path(__file__).parent / "gen-config.yaml"
 
-def main(argv: list[str] | None = None) -> None:
-    p = argparse.ArgumentParser(description="Generate Go config structs from systemd data")
-    p.add_argument("--man", default=None, help="systemd man page name (e.g. systemd.timer)")
-    p.add_argument("--known-units", action="store_true", help="generate known units registry instead of config structs")
-    p.add_argument(
-        "--shared-man",
-        action="append",
-        default=[],
-        help="shared man pages to check for applicability (repeatable)",
-    )
-    p.add_argument("--systemd-src", default="tmp/systemd", help="path to systemd source tree")
-    p.add_argument("--man-dir", default=None, help="directory containing XML man pages (default: <systemd-src>/man)")
-    p.add_argument("--gperf-dir", default=None, help="use pre-extracted gperf JSONL files from this directory instead of extracting from source")
-    p.add_argument("--package", default="configs", help="Go package name")
-    p.add_argument("--parser-types", default=None, help="path to parser_type.jsonl (default: generate in-memory)")
-    p.add_argument("--debug", action="store_true", help="write JSONL intermediates to tmp/gperf/")
-    p.add_argument("--log-level", default="info", help="log level")
-    args = p.parse_args(argv)
 
-    logging.basicConfig(
-        level=getattr(logging, args.log_level.upper(), logging.INFO),
-        format="%(levelname)s %(message)s",
-    )
+def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 
-    systemd_src = Path(args.systemd_src)
-    man_dir = Path(args.man_dir) if args.man_dir else systemd_src / "man"
+    cfg = yaml.safe_load(_CONFIG_PATH.read_text())
 
-    if args.known_units:
-        code = _generate_known_units(man_dir, systemd_src / "units", args.package)
-        print(code, end="")
-        return
+    systemd_src = Path(cfg["systemd_src"])
+    man_dir = systemd_src / "man"
+    pkg = cfg["package"]
+    output_dir = Path(cfg["output_dir"])
+    man_files: list[str] = cfg["man_files"]
+    shared_mans: list[str] = cfg.get("shared_man_files", [])
 
-    if not args.man:
-        p.error("--man is required when not using --known-units")
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    debug_dir = Path("tmp/gperf") if args.debug else None
-
-    python = sys.executable
-    if args.gperf_dir:
-        gperf_records = _load_gperf_from_jsonl(Path(args.gperf_dir))
-    else:
-        gperf_records = extract_all_gperfs(systemd_src, python=python, debug_dir=debug_dir)
+    # --- Load directives (shared across all man pages) ---
+    gperf_records = extract_all_gperfs(systemd_src, python=sys.executable)
     log.info("extracted %d gperf records", len(gperf_records))
 
-    if args.parser_types:
-        parser_map = load_parser_map(Path(args.parser_types))
-    else:
-        parser_map = _run_extract_parser_types(systemd_src, gperf_records, debug_dir)
+    parser_map = _run_extract_parser_types(systemd_src, gperf_records)
     log.info("loaded %d parser type mappings", len(parser_map))
 
     directives = load_all_directives(gperf_records, parser_map)
     log.info("built %d directives", len(directives))
 
-    if args.man == "systemd.unit":
-        print(gen_common(args.package, directives), end="")
-    else:
-        code = _generate_unit(args.man, man_dir, args.package, args.shared_man, directives)
-        print(code, end="")
+    # --- Generate unit config files ---
+    for man in man_files:
+        if man == "systemd.unit":
+            code = gen_common(pkg, directives)
+        else:
+            code = _generate_unit(man, man_dir, pkg, shared_mans, directives)
+
+        out_path = output_dir / f"{man}.go"
+        _write_go_file(out_path, code)
+        log.info("wrote %s", out_path)
+
+    # --- Generate known units registry ---
+    code = _generate_known_units(man_dir, systemd_src / "units", pkg)
+    out_path = output_dir / "known_units.go"
+    _write_go_file(out_path, code)
+    log.info("wrote %s", out_path)
 
 
-def _load_gperf_from_jsonl(gperf_dir: Path) -> list:
-    """Load pre-extracted gperf records from JSONL files."""
-    import json
-    from .gperf import GperfRecord
-
-    records: list[GperfRecord] = []
-    for path in sorted(gperf_dir.glob("gperf_*.jsonl")):
-        for line in path.read_text().splitlines():
-            if not line.strip():
-                continue
-            rec = json.loads(line)
-            records.append(
-                GperfRecord(
-                    system=rec["system"],
-                    section=rec["section"],
-                    property=rec["property"],
-                    parser=rec["parser"],
-                    ltype=rec.get("ltype", ""),
-                    offset=rec.get("offset", ""),
-                )
-            )
-    return records
+def _write_go_file(path: Path, code: str) -> None:
+    """Write code to path, formatted with gofmt."""
+    result = subprocess.run(
+        ["gofmt"],
+        input=code,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        log.error("gofmt failed for %s: %s", path, result.stderr)
+        path.write_text(code)
+        return
+    path.write_text(result.stdout)
 
 
 def _run_extract_parser_types(
     systemd_src: Path,
     gperf_records: list,
-    debug_dir: Path | None,
 ) -> dict[str, str]:
-    """Run extract_parser_types.py in-process to get parser→type map.
-
-    If debug_dir is set, also writes the JSONL file.
-    """
+    """Run extract_parser_types.py to get parser→type map."""
     import json
     import tempfile
 
     scripts_dir = Path(__file__).resolve().parent.parent
     extract_script = scripts_dir / "extract_parser_types.py"
 
-    if debug_dir:
-        output_path = debug_dir / "parser_type.jsonl"
-        gperf_dir = debug_dir
-        debug_dir.mkdir(parents=True, exist_ok=True)
-        cleanup = False
-    else:
-        tmpdir = Path(tempfile.mkdtemp())
-        output_path = tmpdir / "parser_type.jsonl"
-        gperf_dir = tmpdir
-        cleanup = True
+    tmpdir = Path(tempfile.mkdtemp())
+    output_path = tmpdir / "parser_type.jsonl"
 
-    gperf_jsonl_path = gperf_dir / "gperf_all.jsonl"
+    gperf_jsonl_path = tmpdir / "gperf_all.jsonl"
     with open(gperf_jsonl_path, "w") as f:
         for r in gperf_records:
             json.dump({
@@ -145,14 +110,13 @@ def _run_extract_parser_types(
             }, f)
             f.write("\n")
 
-    cmd = [sys.executable, str(extract_script), str(systemd_src), str(output_path), str(gperf_dir)]
+    cmd = [sys.executable, str(extract_script), str(systemd_src), str(output_path), str(tmpdir)]
     subprocess.run(cmd, check=True, capture_output=True, text=True)
 
     parser_map = load_parser_map(output_path)
 
-    if cleanup:
-        import shutil
-        shutil.rmtree(tmpdir, ignore_errors=True)
+    import shutil
+    shutil.rmtree(tmpdir, ignore_errors=True)
 
     return parser_map
 
