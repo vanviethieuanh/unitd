@@ -14,7 +14,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .codegen import gen_common, generate_known_units_code, generate_unit_code, format_imports
+from .codegen import gen_common, generate_known_units_code, generate_unit_code, render_unit_file
 from .directive import Directive
 from .gperf import extract_all_gperfs, load_all_directives, load_parser_map
 from .parser import parse_applicable_types, parse_descriptions, parse_special_units, parse_unit, scan_shipped_units
@@ -187,14 +187,9 @@ def _generate_unit(
 
     unit = parse_unit(xml_path, directives, extra_descriptions)
 
-    code = f"// Generated based on man page {man} of systemd\n\n"
-    code += f"package {pkg}\n\n"
-
     unit_code, imports = generate_unit_code(unit)
-    code += format_imports(sorted(imports))
-    code += unit_code
 
-    return code
+    return render_unit_file(pkg, man, sorted(imports), unit_code)
 
 
 def _generate_known_units(man_dir: Path, units_dir: Path, pkg: str) -> str:

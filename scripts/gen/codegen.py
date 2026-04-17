@@ -19,23 +19,24 @@ _JINJA_ENV = jinja2.Environment(
     trim_blocks=True,
 )
 
+_COMMON_TEMPLATE = _JINJA_ENV.get_template("common.go.j2")
+_UNIT_TEMPLATE = _JINJA_ENV.get_template("unit.go.j2")
+_KNOWN_UNITS_TEMPLATE = _JINJA_ENV.get_template("known_units.go.j2")
+
 
 def gen_common(pkg: str, directives: list[Directive]) -> str:
     """Generate the shared Unit + Install blocks (systemd.unit)."""
     install_code, install_deps = generate_block_struct(directives, "Install", "core")
     unit_code, unit_deps = generate_block_struct(directives, "Unit", "core")
 
-    imports = install_deps | unit_deps
+    imports = sorted(install_deps | unit_deps)
 
-    out = f"package {pkg}\n\n"
-    out += "\n"
-    out += _format_imports(sorted(imports))
-    out += "\n"
-    out += install_code
-    out += "\n"
-    out += unit_code
-
-    return out
+    return _COMMON_TEMPLATE.render(
+        pkg=pkg,
+        imports=imports,
+        install_block=install_code,
+        unit_block=unit_code,
+    )
 
 
 def generate_unit_code(u: Unit) -> tuple[str, set[str]]:
@@ -44,9 +45,11 @@ def generate_unit_code(u: Unit) -> tuple[str, set[str]]:
     Returns (code, import_set).
     """
     import_set: set[str] = set()
-    out = ""
+    parts: list[str] = []
 
-    out += _format_unit_doc(u)
+    doc = _format_unit_doc(u)
+    if doc:
+        parts.append(doc.rstrip("\n"))
 
     block_type = to_pascal_case(u.name)
     sub_block_type = block_type + "Block"
@@ -55,21 +58,20 @@ def generate_unit_code(u: Unit) -> tuple[str, set[str]]:
     if has_block_type:
         code, deps = generate_block_struct(u.options, u.name, "core")
         import_set |= deps
-        out += code
-        out += "\n"
+        parts.append(code)
 
-    out += f"type {block_type} struct {{\n"
-    out += '\tName string `hcl:"name,label"`\n\n'
-    out += '\tUnit    UnitBlock    `hcl:"unit,block"`\n'
-
+    snake = to_snake_case(block_type) if has_block_type else ""
+    struct_lines = [f"type {block_type} struct {{"]
+    struct_lines.append(f'\tName string `hcl:"name,label"`')
+    struct_lines.append("")
+    struct_lines.append(f'\tUnit    UnitBlock    `hcl:"unit,block"`')
     if has_block_type:
-        snake = to_snake_case(block_type)
-        out += f'\t{block_type} {sub_block_type} `hcl:"{snake},block"`\n'
+        struct_lines.append(f'\t{block_type} {sub_block_type} `hcl:"{snake},block"`')
+    struct_lines.append(f'\tInstall InstallBlock `hcl:"install,block"`')
+    struct_lines.append("}")
+    parts.append("\n".join(struct_lines) + "\n")
 
-    out += '\tInstall InstallBlock `hcl:"install,block"`\n'
-    out += "}\n"
-
-    return out, import_set
+    return "\n".join(parts), import_set
 
 
 def _format_unit_doc(u: Unit) -> str:
@@ -104,6 +106,16 @@ def _format_imports(packages: list[str]) -> str:
         out += f'\t"{p}"\n'
     out += ")\n"
     return out
+
+
+def render_unit_file(pkg: str, man: str, imports: list[str], unit_code: str) -> str:
+    """Render a complete unit Go file from pre-generated unit code."""
+    return _UNIT_TEMPLATE.render(
+        pkg=pkg,
+        man=man,
+        imports=imports,
+        unit_code=unit_code,
+    )
 
 
 _KNOWN_UNITS_TEMPLATE = _JINJA_ENV.get_template("known_units.go.j2")
