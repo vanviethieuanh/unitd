@@ -41,11 +41,6 @@ tasks:
     deps:
       - clone-or-pull-systemd
     cmds:
-      - mkdir -p tmp
-      - mkdir -p ./tmp/gperf
-
-      - task: extract-gperfs
-      - $PYTHON scripts/extract_parser_types.py "{{.SYSTEMD_PATH}}" ./tmp/gperf/parser_type.jsonl ./tmp/gperf
       - task: gen-files
 
   gen-files:
@@ -62,17 +57,15 @@ tasks:
   gen-file:
     internal: true
     cmds:
-      - go run ./cmd/gen --man {{.MAN}} --shared-man systemd.exec --shared-man systemd.kill --shared-man systemd.resource-control > ./configs/{{.MAN}}.go
+      - $PYTHON -m scripts.gen --man {{.MAN}} --shared-man systemd.exec --shared-man systemd.kill --shared-man systemd.resource-control --log-level error > ./configs/{{.MAN}}.go
 
   test-gen:
-    desc: Verify that cmd/gen produces identical output for the current systemd version
+    desc: Verify that scripts/gen produces identical output for the current systemd version
     deps:
       - clone-or-pull-systemd
     cmds:
       - mkdir -p tmp/test-gen
       - defer: rm -rf tmp/test-gen
-      - task: extract-gperfs
-      - $PYTHON scripts/extract_parser_types.py "{{.SYSTEMD_PATH}}" ./tmp/gperf/parser_type.jsonl ./tmp/gperf
       - for:
           var: MAN_FILES
         task: test-gen-file
@@ -82,29 +75,10 @@ tasks:
   test-gen-file:
     internal: true
     cmds:
-      - cmd: go run ./cmd/gen --log-level error --man {{.MAN}} --shared-man systemd.exec --shared-man systemd.kill --shared-man systemd.resource-control | gofmt > tmp/test-gen/{{.MAN}}.go
+      - cmd: $PYTHON -m scripts.gen --man {{.MAN}} --shared-man systemd.exec --shared-man systemd.kill --shared-man systemd.resource-control --log-level error | gofmt > tmp/test-gen/{{.MAN}}.go
         silent: true
       - diff -u ./configs/{{.MAN}}.go tmp/test-gen/{{.MAN}}.go
 
-  extract-gperfs:
-    internal: true
-    silent: true
-    vars:
-      FILES:
-        sh: find tmp/systemd/src -type f \( -name '*.gperf' -o -name '*.gperf.in' \)
-    deps:
-      - for:
-          var: FILES
-        task: extract-gperf
-        vars:
-          ITEM: "{{.ITEM}}"
-
-  extract-gperf:
-    internal: true
-    silent: true
-    cmds:
-      - ./scripts/extract_gperf.sh "{{.ITEM}}" "./tmp/gperf"
-  
   setup-python:
     desc: Set up Python venv in .venv and install dependencies
     cmds:

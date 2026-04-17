@@ -93,7 +93,7 @@ type ScopeBlock struct {
 	// Specifies which signal to use when stopping a service. This controls the signal that is sent as
 	// first step of shutting down a unit (see above), and is usually followed by SIGKILL (see above and
 	// below). For a list of valid signals, see <citerefentry
-	// project='man-pages'><refentrytitle>signal</refentrytitle><manvolnum>7</manvolnum></citerefentry>.
+	// project="man-pages"><refentrytitle>signal</refentrytitle><manvolnum>7</manvolnum></citerefentry>.
 	// Defaults to SIGTERM.
 	//
 	// Note that, right after sending the signal specified in this setting, systemd will always send

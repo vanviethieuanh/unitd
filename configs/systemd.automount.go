@@ -34,7 +34,7 @@ type AutomountBlock struct {
 	DirectoryMode os.FileMode `unitd:"directory_mode,optional" systemd:"DirectoryMode"`
 	// Extra mount options to use when creating the autofs mountpoint. This takes a comma-separated list of
 	// options. This setting is optional. Note that the usual specifier expansion is applied to this
-	// setting, literal percent characters should hence be written as <literal class='specifiers'>%%.
+	// setting, literal percent characters should hence be written as <literal class="specifiers">%%.
 	ExtraOptions string `hcl:"extra_options,optional" systemd:"ExtraOptions"`
 	// Configures an idle timeout. Once the mount has been idle for the specified time, systemd will
 	// attempt to unmount. Takes a unit-less value in seconds, or a time span value such as "5min 20s".

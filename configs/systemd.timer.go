@@ -132,8 +132,8 @@ type TimerBlock struct {
 	// the service when the system was powered down. Note that this setting only has an effect on timers
 	// configured with OnCalendar=. Defaults to false.
 	//
-	// Use systemctl clean --what=state … on the timer unit to remove the timestamp file maintained by
-	// this option from disk. In particular, use this command before uninstalling a timer unit. See
+	// Use systemctl clean --what=state … on the timer unit to remove the timestamp file maintained by this
+	// option from disk. In particular, use this command before uninstalling a timer unit. See
 	// <citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>1</manvolnum></citerefentry> for
 	// details.
 	//

@@ -44,28 +44,28 @@ type ServiceBlock struct {
 	// affect commands prefixed with +.
 	AppArmorProfile string `hcl:"app_armor_profile,optional" systemd:"AppArmorProfile"`
 	// Accepts a list of BPF attach points to allow or any to allow everything. Defaults to none. The
-	// accepted values are: <xi:include href="bpf-delegate.xml" xpointer="bpf_delegate_attach_type"/> This
-	// will set the delegate_attachs bpffs mount option.
+	// accepted values are: <ns0:include href="bpf-delegate.xml" xpointer="bpf_delegate_attach_type" />
+	// This will set the delegate_attachs bpffs mount option.
 	//
 	// Requires PrivateBPF=yes to be effective, see PrivateBPF= more details.
 	//
 	BPFDelegateAttachments []string `hcl:"bpf_delegate_attachments,optional" systemd:"BPFDelegateAttachments"`
 	// Accepts a list of BPF commands to allow or any to allow everything. Defaults to none. The accepted
-	// values are: <xi:include href="bpf-delegate.xml" xpointer="bpf_delegate_cmd"/> This will set the
+	// values are: <ns0:include href="bpf-delegate.xml" xpointer="bpf_delegate_cmd" /> This will set the
 	// delegate_cmds bpffs mount option.
 	//
 	// Requires PrivateBPF=yes to be effective, see PrivateBPF= more details.
 	//
 	BPFDelegateCommands []string `hcl:"bpf_delegate_commands,optional" systemd:"BPFDelegateCommands"`
 	// Accepts a list of BPF maps to allow or any to allow everything. Defaults to none. The accepted
-	// values are: <xi:include href="bpf-delegate.xml" xpointer="bpf_delegate_map_type"/> This will set the
-	// delegate_maps bpffs mount option.
+	// values are: <ns0:include href="bpf-delegate.xml" xpointer="bpf_delegate_map_type" /> This will set
+	// the delegate_maps bpffs mount option.
 	//
 	// Requires PrivateBPF=yes to be effective, see PrivateBPF= more details.
 	//
 	BPFDelegateMaps []string `hcl:"bpf_delegate_maps,optional" systemd:"BPFDelegateMaps"`
 	// Accepts a list of BPF programs to allow or any to allow everything. Defaults to none. The accepted
-	// values are: <xi:include href="bpf-delegate.xml" xpointer="bpf_delegate_prog_type"/> This will set
+	// values are: <ns0:include href="bpf-delegate.xml" xpointer="bpf_delegate_prog_type" /> This will set
 	// the delegate_progs bpffs mount option.
 	//
 	// Requires PrivateBPF=yes to be effective, see PrivateBPF= more details.
@@ -156,7 +156,7 @@ type ServiceBlock struct {
 	// specified by the lower and upper CPU indices separated by a dash. This option may be specified more
 	// than once, in which case the specified CPU affinity masks are merged. If the empty string is
 	// assigned, the mask is reset, all assignments prior to this will have no effect. See <citerefentry
-	// project='man-pages'><refentrytitle>sched_setaffinity</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>sched_setaffinity</refentrytitle><manvolnum>2</manvolnum></citerefentry>
 	// for details.
 	CPUAffinity             string `hcl:"cpu_affinity,optional" systemd:"CPUAffinity"`
 	CPUPressureThresholdSec int    `hcl:"cpu_pressure_threshold_sec,optional" systemd:"CPUPressureThresholdSec"`
@@ -165,7 +165,7 @@ type ServiceBlock struct {
 	CPUQuotaPeriodSec       int    `hcl:"cpu_quota_period_sec,optional" systemd:"CPUQuotaPeriodSec"`
 	// Sets the CPU scheduling policy for executed processes. Takes one of other, batch, idle, fifo, rr or
 	// ext. See <citerefentry
-	// project='man-pages'><refentrytitle>sched_setscheduler</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>sched_setscheduler</refentrytitle><manvolnum>2</manvolnum></citerefentry>
 	// for details.
 	CPUSchedulingPolicy string `hcl:"cpu_scheduling_policy,optional" systemd:"CPUSchedulingPolicy"`
 	// Sets the CPU scheduling priority for executed processes. The available priority range depends on the
@@ -173,14 +173,14 @@ type ServiceBlock struct {
 	// (lowest priority) and 99 (highest priority) can be used. In case of CPU resource contention, smaller
 	// values mean less CPU time is made available to the service, larger values mean more. See
 	// <citerefentry
-	// project='man-pages'><refentrytitle>sched_setscheduler</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>sched_setscheduler</refentrytitle><manvolnum>2</manvolnum></citerefentry>
 	// for details.
 	CPUSchedulingPriority string `hcl:"cpu_scheduling_priority,optional" systemd:"CPUSchedulingPriority"`
 	// Takes a boolean argument. If true, elevated CPU scheduling priorities and policies will be reset
 	// when the executed processes call <citerefentry
-	// project='man-pages'><refentrytitle>fork</refentrytitle><manvolnum>2</manvolnum></citerefentry>, and
+	// project="man-pages"><refentrytitle>fork</refentrytitle><manvolnum>2</manvolnum></citerefentry>, and
 	// can hence not leak into child processes. See <citerefentry
-	// project='man-pages'><refentrytitle>sched_setscheduler</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>sched_setscheduler</refentrytitle><manvolnum>2</manvolnum></citerefentry>
 	// for details. Defaults to false.
 	CPUSchedulingResetOnFork bool   `hcl:"cpu_scheduling_reset_on_fork,optional" systemd:"CPUSchedulingResetOnFork"`
 	CPUWeight                uint64 `hcl:"cpu_weight,optional" systemd:"CPUWeight"`
@@ -198,7 +198,7 @@ type ServiceBlock struct {
 	// Specifies the access mode of the directories specified in RuntimeDirectory=, StateDirectory=,
 	// CacheDirectory=, LogsDirectory=, or ConfigurationDirectory=, respectively, as an octal number.
 	// Defaults to 0755. See "Permissions" in <citerefentry
-	// project='man-pages'><refentrytitle>path_resolution</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>path_resolution</refentrytitle><manvolnum>7</manvolnum></citerefentry>
 	// for a discussion of the meaning of permission bits.
 	CacheDirectoryMode os.FileMode `unitd:"cache_directory_mode,optional" systemd:"CacheDirectoryMode"`
 	// Specifies the storage limits for the directories specified in StateDirectory=, CacheDirectory=, or
@@ -221,7 +221,7 @@ type ServiceBlock struct {
 	CacheDirectoryQuota string `hcl:"cache_directory_quota,optional" systemd:"CacheDirectoryQuota"`
 	// Controls which capabilities to include in the capability bounding set for the executed process. See
 	// <citerefentry
-	// project='man-pages'><refentrytitle>capabilities</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>capabilities</refentrytitle><manvolnum>7</manvolnum></citerefentry>
 	// for details. Takes a whitespace-separated list of capability names, e.g. CAP_SYS_ADMIN,
 	// CAP_DAC_OVERRIDE, CAP_SYS_PTRACE. Capabilities listed will be included in the bounding set, all
 	// others are removed. If the list of capabilities is prefixed with ~, all but the listed capabilities
@@ -240,10 +240,10 @@ type ServiceBlock struct {
 	// capability command to retrieve a list of capabilities defined on the local system.
 	//
 	// Example: if a unit has the following, <programlisting>CapabilityBoundingSet=CAP_A CAP_B
-	// CapabilityBoundingSet=CAP_B CAP_C</programlisting> then <constant index='false'>CAP_A, <constant
-	// index='false'>CAP_B, and <constant index='false'>CAP_C are set. If the second line is prefixed with
+	// CapabilityBoundingSet=CAP_B CAP_C</programlisting> then <constant index="false">CAP_A, <constant
+	// index="false">CAP_B, and <constant index="false">CAP_C are set. If the second line is prefixed with
 	// ~, e.g., <programlisting>CapabilityBoundingSet=CAP_A CAP_B CapabilityBoundingSet=~CAP_B
-	// CAP_C</programlisting> then, only <constant index='false'>CAP_A is set.
+	// CAP_C</programlisting> then, only <constant index="false">CAP_A is set.
 	//
 	CapabilityBoundingSet []string `hcl:"capability_bounding_set,optional" systemd:"CapabilityBoundingSet"`
 	// /etc/
@@ -251,7 +251,7 @@ type ServiceBlock struct {
 	// Specifies the access mode of the directories specified in RuntimeDirectory=, StateDirectory=,
 	// CacheDirectory=, LogsDirectory=, or ConfigurationDirectory=, respectively, as an octal number.
 	// Defaults to 0755. See "Permissions" in <citerefentry
-	// project='man-pages'><refentrytitle>path_resolution</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>path_resolution</refentrytitle><manvolnum>7</manvolnum></citerefentry>
 	// for a discussion of the meaning of permission bits.
 	ConfigurationDirectoryMode os.FileMode `unitd:"configuration_directory_mode,optional" systemd:"ConfigurationDirectoryMode"`
 	// Controls which types of memory mappings will be saved if the process dumps core (using the
@@ -260,7 +260,7 @@ type ServiceBlock struct {
 	// private-file-backed, shared-file-backed, elf-headers, private-huge, shared-huge, private-dax,
 	// shared-dax, and the special values all (all types) and default (the kernel default of
 	// private-anonymous shared-anonymous elf-headers private-huge). See <citerefentry
-	// project='man-pages'><refentrytitle>core</refentrytitle><manvolnum>5</manvolnum></citerefentry> for
+	// project="man-pages"><refentrytitle>core</refentrytitle><manvolnum>5</manvolnum></citerefentry> for
 	// the meaning of the mapping types. When specified multiple times, all specified masks are ORed. When
 	// not set, or if the empty value is assigned, the inherited value is not changed.
 	CoredumpFilter  string `hcl:"coredump_filter,optional" systemd:"CoredumpFilter"`
@@ -268,7 +268,7 @@ type ServiceBlock struct {
 	Delegate        string `hcl:"delegate,optional" systemd:"Delegate"`
 	// Delegates ownership of the given namespace types to the user namespace of the processes of this
 	// unit. For details about Linux namespaces, see <citerefentry
-	// project='man-pages'><refentrytitle>namespaces</refentrytitle><manvolnum>7</manvolnum></citerefentry>.
+	// project="man-pages"><refentrytitle>namespaces</refentrytitle><manvolnum>7</manvolnum></citerefentry>.
 	// Either takes a boolean argument, or a space-separated list of namespace type identifiers. If false
 	// (the default), the unit's processes' user namespace will not have ownership over any namespaces
 	// created during setup of the unit's sandboxed environment. If true, ownership of all namespace types
@@ -369,15 +369,15 @@ type ServiceBlock struct {
 	// gives three variables VAR1, VAR2, VAR3 with the values word1 word2, word3, $word 5 6.
 	//
 	// See <citerefentry
-	// project='man-pages'><refentrytitle>environ</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>environ</refentrytitle><manvolnum>7</manvolnum></citerefentry>
 	// for details about environment variables.
 	//
 	// Note that environment variables are not suitable for passing secrets (such as passwords, key
-	// material, …) to service processes. Environment variables set for a unit are exposed to
-	// unprivileged clients via D-Bus IPC, and generally not understood as being data that requires
-	// protection. Moreover, environment variables are propagated down the process tree, including across
-	// security boundaries (such as setuid/setgid executables), and hence might leak to processes that
-	// should not have access to the secret data. Use LoadCredential=, LoadCredentialEncrypted= or
+	// material, …) to service processes. Environment variables set for a unit are exposed to unprivileged
+	// clients via D-Bus IPC, and generally not understood as being data that requires protection.
+	// Moreover, environment variables are propagated down the process tree, including across security
+	// boundaries (such as setuid/setgid executables), and hence might leak to processes that should not
+	// have access to the secret data. Use LoadCredential=, LoadCredentialEncrypted= or
 	// SetCredentialEncrypted= (see below) to pass data to unit processes securely.
 	//
 	Environment []string `hcl:"environment,optional" systemd:"Environment"`
@@ -521,7 +521,7 @@ type ServiceBlock struct {
 	// is thus strongly recommended to either use Type=notify-reload, or to set ExecReload= to a command
 	// that not only triggers a configuration reload of the daemon, but also synchronously waits for it to
 	// complete. For example, <citerefentry
-	// project='mankier'><refentrytitle>dbus-broker</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+	// project="mankier"><refentrytitle>dbus-broker</refentrytitle><manvolnum>1</manvolnum></citerefentry>
 	// uses the following:
 	//
 	// This setting can be combined with Type=notify-reload, in which case the service main process is
@@ -646,9 +646,8 @@ type ServiceBlock struct {
 	// commands configured in ExecStop= were used, where the service does not have any ExecStop= defined,
 	// or where the service exited unexpectedly. This argument takes multiple command lines, following the
 	// same scheme as described for ExecStart=. Use of these settings is optional. Specifier and
-	// environment variable substitution is supported. Note that – unlike ExecStop= – commands
-	// specified with this setting are invoked when a service failed to start up correctly and is shut down
-	// again.
+	// environment variable substitution is supported. Note that – unlike ExecStop= – commands specified
+	// with this setting are invoked when a service failed to start up correctly and is shut down again.
 	//
 	// It is recommended to use this setting for clean-up operations that shall be executed even when the
 	// service failed to start up correctly. Commands configured with this setting need to be able to
@@ -917,7 +916,7 @@ type ServiceBlock struct {
 	// order. When multiple credentials of the same name are found, the first one found is used.
 	//
 	// The globbing expression implements a restrictive subset of <citerefentry
-	// project='man-pages'><refentrytitle>glob</refentrytitle><manvolnum>7</manvolnum></citerefentry>: only
+	// project="man-pages"><refentrytitle>glob</refentrytitle><manvolnum>7</manvolnum></citerefentry>: only
 	// a single trailing * wildcard may be specified. Both ? and [] wildcards are not permitted, nor are *
 	// wildcards anywhere except at the end of the glob expression.
 	//
@@ -1004,7 +1003,7 @@ type ServiceBlock struct {
 	//
 	InaccessiblePaths []string `hcl:"inaccessible_paths,optional" systemd:"InaccessiblePaths"`
 	// Controls how the kernel session keyring is set up for the service (see <citerefentry
-	// project='man-pages'><refentrytitle>session-keyring</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>session-keyring</refentrytitle><manvolnum>7</manvolnum></citerefentry>
 	// for details on the session keyring). Takes one of inherit, private, shared. If set to inherit no
 	// special keyring setup is done, and the kernel's default behaviour is applied. If private is used a
 	// new session keyring is allocated when a service process is invoked, and it is not linked up with any
@@ -1050,7 +1049,7 @@ type ServiceBlock struct {
 	// Specifies which signal to use when stopping a service. This controls the signal that is sent as
 	// first step of shutting down a unit (see above), and is usually followed by SIGKILL (see above and
 	// below). For a list of valid signals, see <citerefentry
-	// project='man-pages'><refentrytitle>signal</refentrytitle><manvolnum>7</manvolnum></citerefentry>.
+	// project="man-pages"><refentrytitle>signal</refentrytitle><manvolnum>7</manvolnum></citerefentry>.
 	// Defaults to SIGTERM.
 	//
 	// Note that, right after sending the signal specified in this setting, systemd will always send
@@ -1199,7 +1198,7 @@ type ServiceBlock struct {
 	// If referencing an AF_UNIX stream socket to connect to, the connection will originate from an
 	// abstract namespace socket, that includes information about the unit and the credential ID in its
 	// socket name. Use <citerefentry
-	// project='man-pages'><refentrytitle>getpeername</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>getpeername</refentrytitle><manvolnum>2</manvolnum></citerefentry>
 	// to query this information. The returned socket name is formatted as NUL RANDOM /unit/ UNIT / ID,
 	// i.e. a NUL byte (as required for abstract namespace socket names), followed by a random string
 	// (consisting of alphadecimal characters), followed by the literal string /unit/, followed by the
@@ -1322,7 +1321,7 @@ type ServiceBlock struct {
 	// If referencing an AF_UNIX stream socket to connect to, the connection will originate from an
 	// abstract namespace socket, that includes information about the unit and the credential ID in its
 	// socket name. Use <citerefentry
-	// project='man-pages'><refentrytitle>getpeername</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>getpeername</refentrytitle><manvolnum>2</manvolnum></citerefentry>
 	// to query this information. The returned socket name is formatted as NUL RANDOM /unit/ UNIT / ID,
 	// i.e. a NUL byte (as required for abstract namespace socket names), followed by a random string
 	// (consisting of alphadecimal characters), followed by the literal string /unit/, followed by the
@@ -1336,7 +1335,7 @@ type ServiceBlock struct {
 	//
 	LoadCredentialEncrypted []string `hcl:"load_credential_encrypted,optional" systemd:"LoadCredentialEncrypted"`
 	// Takes a boolean argument. If set, locks down the <citerefentry
-	// project='man-pages'><refentrytitle>personality</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>personality</refentrytitle><manvolnum>2</manvolnum></citerefentry>
 	// system call so that the kernel execution domain may not be changed from the default or the
 	// personality selected with Personality= directive. This may be useful to improve security, because
 	// odd personality emulations may be poorly tested and source of vulnerabilities.
@@ -1347,11 +1346,10 @@ type ServiceBlock struct {
 	// <citerefentry><refentrytitle>systemd.journal-fields</refentrytitle><manvolnum>7</manvolnum></citerefentry>
 	// for details on the journal field concept. Even though the underlying journal implementation permits
 	// binary field values, this setting accepts only valid UTF-8 values. To include space characters in a
-	// journal field value, enclose the assignment in double quotes ("). <!-- " fake closing quote for
-	// emacs--> The usual specifiers are expanded in all assignments (see below). Note that this setting is
-	// not only useful for attaching additional metadata to log records of a unit, but given that all
-	// fields and values are indexed may also be used to implement cross-unit log record matching. Assign
-	// an empty string to reset the list.
+	// journal field value, enclose the assignment in double quotes ("). The usual specifiers are expanded
+	// in all assignments (see below). Note that this setting is not only useful for attaching additional
+	// metadata to log records of a unit, but given that all fields and values are indexed may also be used
+	// to implement cross-unit log record matching. Assign an empty string to reset the list.
 	//
 	// Note that this functionality is currently only available in system services, not in per-user
 	// services.
@@ -1386,7 +1384,7 @@ type ServiceBlock struct {
 	// Sets the maximum log level for log messages generated by this unit. Takes a syslog log level, one of
 	// emerg (lowest log level, only highest priority messages), alert, crit, err, warning, notice, info,
 	// debug (highest log level, also lowest priority messages). See <citerefentry
-	// project='man-pages'><refentrytitle>syslog</refentrytitle><manvolnum>3</manvolnum></citerefentry> for
+	// project="man-pages"><refentrytitle>syslog</refentrytitle><manvolnum>3</manvolnum></citerefentry> for
 	// details. By default, the maximum log level is not overridden.
 	//
 	// This option can be used to configure the logging system to drop log messages of a specific service
@@ -1442,10 +1440,10 @@ type ServiceBlock struct {
 	// <citerefentry><refentrytitle>journald.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>.
 	// Note that this only applies to log messages that are processed by the logging subsystem, i.e. by
 	// <citerefentry><refentrytitle>systemd-journald.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>.
-	// This means that if you connect a service's stderr directly to a file via StandardOutput=file:… or
-	// a similar setting, the rate limiting will not be applied to messages written that way (but it will
-	// be enforced for messages generated via <citerefentry
-	// project='man-pages'><refentrytitle>syslog</refentrytitle><manvolnum>3</manvolnum></citerefentry> and
+	// This means that if you connect a service's stderr directly to a file via StandardOutput=file:… or a
+	// similar setting, the rate limiting will not be applied to messages written that way (but it will be
+	// enforced for messages generated via <citerefentry
+	// project="man-pages"><refentrytitle>syslog</refentrytitle><manvolnum>3</manvolnum></citerefentry> and
 	// similar functions).
 	LogRateLimitBurst uint64 `hcl:"log_rate_limit_burst,optional" systemd:"LogRateLimitBurst"`
 	// Configures the rate limiting that is applied to log messages generated by this unit. If, in the time
@@ -1458,10 +1456,10 @@ type ServiceBlock struct {
 	// <citerefentry><refentrytitle>journald.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>.
 	// Note that this only applies to log messages that are processed by the logging subsystem, i.e. by
 	// <citerefentry><refentrytitle>systemd-journald.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>.
-	// This means that if you connect a service's stderr directly to a file via StandardOutput=file:… or
-	// a similar setting, the rate limiting will not be applied to messages written that way (but it will
-	// be enforced for messages generated via <citerefentry
-	// project='man-pages'><refentrytitle>syslog</refentrytitle><manvolnum>3</manvolnum></citerefentry> and
+	// This means that if you connect a service's stderr directly to a file via StandardOutput=file:… or a
+	// similar setting, the rate limiting will not be applied to messages written that way (but it will be
+	// enforced for messages generated via <citerefentry
+	// project="man-pages"><refentrytitle>syslog</refentrytitle><manvolnum>3</manvolnum></citerefentry> and
 	// similar functions).
 	LogRateLimitIntervalSec int `hcl:"log_rate_limit_interval_sec,optional" systemd:"LogRateLimitIntervalSec"`
 	// /var/log/
@@ -1478,7 +1476,7 @@ type ServiceBlock struct {
 	// Specifies the access mode of the directories specified in RuntimeDirectory=, StateDirectory=,
 	// CacheDirectory=, LogsDirectory=, or ConfigurationDirectory=, respectively, as an octal number.
 	// Defaults to 0755. See "Permissions" in <citerefentry
-	// project='man-pages'><refentrytitle>path_resolution</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>path_resolution</refentrytitle><manvolnum>7</manvolnum></citerefentry>
 	// for a discussion of the meaning of permission bits.
 	LogsDirectoryMode os.FileMode `unitd:"logs_directory_mode,optional" systemd:"LogsDirectoryMode"`
 	// Specifies the storage limits for the directories specified in StateDirectory=, CacheDirectory=, or
@@ -1595,7 +1593,7 @@ type ServiceBlock struct {
 	// Takes a mount propagation setting: shared, slave or private, which controls whether file system
 	// mount points in the file system namespaces set up for this unit's processes will receive or
 	// propagate mounts and unmounts from other file system namespaces. See <citerefentry
-	// project='man-pages'><refentrytitle>mount</refentrytitle><manvolnum>2</manvolnum></citerefentry> for
+	// project="man-pages"><refentrytitle>mount</refentrytitle><manvolnum>2</manvolnum></citerefentry> for
 	// details on mount propagation, and the three propagation flags in particular.
 	//
 	// This setting only controls the final propagation setting in effect on all mount points of the file
@@ -1670,7 +1668,7 @@ type ServiceBlock struct {
 	// policy must be specified in NUMAMask=. For more details on each policy please see,
 	// <citerefentry><refentrytitle>set_mempolicy</refentrytitle><manvolnum>2</manvolnum></citerefentry>.
 	// For overall overview of NUMA support in Linux see, <citerefentry
-	// project='man-pages'><refentrytitle>numa</refentrytitle><manvolnum>7</manvolnum></citerefentry>.
+	// project="man-pages"><refentrytitle>numa</refentrytitle><manvolnum>7</manvolnum></citerefentry>.
 	NUMAPolicy string `hcl:"numa_policy,optional" systemd:"NUMAPolicy"`
 	// Takes an absolute file system path referring to a Linux network namespace pseudo-file (i.e. a file
 	// like /proc/$PID/ns/net or a bind mount or symlink to one). When set the invoked processes are added
@@ -1765,15 +1763,15 @@ type ServiceBlock struct {
 	// Note that this setting only has an effect on the unit's processes themselves (or any processes
 	// directly or indirectly forked off them). It has no effect on processes potentially invoked on
 	// request of them through tools such as <citerefentry
-	// project='man-pages'><refentrytitle>at</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>at</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>crontab</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>crontab</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
 	// <citerefentry><refentrytitle>systemd-run</refentrytitle><manvolnum>1</manvolnum></citerefentry>, or
 	// arbitrary IPC services.
 	//
 	NoNewPrivileges bool `hcl:"no_new_privileges,optional" systemd:"NoNewPrivileges"`
 	// Set the O_NONBLOCK flag for all file descriptors passed via socket-based activation. If true, all
-	// file descriptors >= 3 (i.e. all except stdin, stdout, stderr), excluding those passed in via the
+	// file descriptors &gt;= 3 (i.e. all except stdin, stdout, stderr), excluding those passed in via the
 	// file descriptor storage logic (see FileDescriptorStoreMax= for details), will have the O_NONBLOCK
 	// flag set and hence are in non-blocking mode. This option is only useful in conjunction with a socket
 	// unit, as described in
@@ -1889,7 +1887,7 @@ type ServiceBlock struct {
 	// a PAM session under the specified service name. This is only useful in conjunction with the User=
 	// setting, and is otherwise ignored. If not set, no PAM session will be opened for the executed
 	// processes. See <citerefentry
-	// project='man-pages'><refentrytitle>pam</refentrytitle><manvolnum>8</manvolnum></citerefentry> for
+	// project="man-pages"><refentrytitle>pam</refentrytitle><manvolnum>8</manvolnum></citerefentry> for
 	// details.
 	//
 	// Note that for each unit making use of this option a PAM session handler process will be maintained
@@ -1948,13 +1946,13 @@ type ServiceBlock struct {
 	// VAR1, VAR2, VAR3 with the values set for those variables in PID1.
 	//
 	// See <citerefentry
-	// project='man-pages'><refentrytitle>environ</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>environ</refentrytitle><manvolnum>7</manvolnum></citerefentry>
 	// for details about environment variables.
 	//
 	PassEnvironment      []string `hcl:"pass_environment,optional" systemd:"PassEnvironment"`
 	PermissionsStartOnly bool     `hcl:"permissions_start_only,optional" systemd:"PermissionsStartOnly"`
 	// Controls which kernel architecture <citerefentry
-	// project='man-pages'><refentrytitle>uname</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>uname</refentrytitle><manvolnum>2</manvolnum></citerefentry>
 	// shall report, when invoked by unit processes. Takes one of the architecture identifiers arm64,
 	// arm64-be, arm, arm-be, x86, x86-64, ppc, ppc-le, ppc64, ppc64-le, s390 or s390x. Which personality
 	// architectures are supported depends on the kernel's native architecture. Usually the 64-bit versions
@@ -2020,7 +2018,7 @@ type ServiceBlock struct {
 	// effect on SysV IPC (which is mostly legacy) as well as POSIX message queues (for which
 	// AF_UNIX/SOCK_SEQPACKET sockets are typically a better replacement). IPC namespacing also has no
 	// effect on POSIX shared memory (which is subject to mount namespacing) either. See <citerefentry
-	// project='man-pages'><refentrytitle>ipc_namespaces</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>ipc_namespaces</refentrytitle><manvolnum>7</manvolnum></citerefentry>
 	// for the details.
 	//
 	// Note that the implementation of this setting might be impossible (for example if IPC namespaces are
@@ -2034,7 +2032,7 @@ type ServiceBlock struct {
 	// unit's processes will be private to them and not be visible to the host. However, file system mount
 	// points established or removed on the host will be propagated to the unit's processes. See
 	// <citerefentry
-	// project='man-pages'><refentrytitle>mount_namespaces</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>mount_namespaces</refentrytitle><manvolnum>7</manvolnum></citerefentry>
 	// for details on file system namespaces. Defaults to off.
 	//
 	// When turned on, this executes three operations for each invoked process: a new CLONE_NEWNS namespace
@@ -2051,9 +2049,9 @@ type ServiceBlock struct {
 	// enables sharing of the /tmp/ and /var/tmp/ directories.
 	//
 	// Other file system namespace unit settings — PrivateTmp=, PrivateDevices=, ProtectSystem=,
-	// ProtectHome=, ReadOnlyPaths=, InaccessiblePaths=, ReadWritePaths=, BindPaths=, BindReadOnlyPaths=,
-	// … — also enable file system namespacing in a fashion equivalent to this option. Hence it is
-	// primarily useful to explicitly request this behaviour if none of the other settings are used.
+	// ProtectHome=, ReadOnlyPaths=, InaccessiblePaths=, ReadWritePaths=, BindPaths=, BindReadOnlyPaths=, …
+	// — also enable file system namespacing in a fashion equivalent to this option. Hence it is primarily
+	// useful to explicitly request this behaviour if none of the other settings are used.
 	//
 	PrivateMounts bool `hcl:"private_mounts,optional" systemd:"PrivateMounts"`
 	// Takes a boolean argument. If true, sets up a new network namespace for the executed processes and
@@ -2174,7 +2172,7 @@ type ServiceBlock struct {
 	//
 	ProtectClock bool `hcl:"protect_clock,optional" systemd:"ProtectClock"`
 	// Takes a boolean argument or the special values private or strict. If true, the Linux Control Groups
-	// (<citerefentry project='man-pages'>
+	// (<citerefentry project="man-pages">
 	// <refentrytitle>cgroups</refentrytitle><manvolnum>7</manvolnum></citerefentry>) hierarchies
 	// accessible through /sys/fs/cgroup/ will be made read-only to all processes of the unit. If set to
 	// private, the unit will run in a cgroup namespace with a private writable mount of /sys/fs/cgroup/.
@@ -2236,9 +2234,9 @@ type ServiceBlock struct {
 	// recommended to turn this on for most services that do not need to read from or write to the kernel
 	// log ring buffer. Enabling this option removes CAP_SYSLOG from the capability bounding set for this
 	// unit, and installs a system call filter to block the <citerefentry
-	// project='man-pages'><refentrytitle>syslog</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>syslog</refentrytitle><manvolnum>2</manvolnum></citerefentry>
 	// system call (not to be confused with the libc API <citerefentry
-	// project='man-pages'><refentrytitle>syslog</refentrytitle><manvolnum>3</manvolnum></citerefentry> for
+	// project="man-pages"><refentrytitle>syslog</refentrytitle><manvolnum>3</manvolnum></citerefentry> for
 	// userspace logging). The kernel exposes its log buffer to userspace via /dev/kmsg and /proc/kmsg. If
 	// enabled, these are made inaccessible to all the processes in the unit.
 	ProtectKernelLogs bool `hcl:"protect_kernel_logs,optional" systemd:"ProtectKernelLogs"`
@@ -2297,9 +2295,9 @@ type ServiceBlock struct {
 	// its configuration, and local mounts) is prohibited for the service. It is recommended to enable this
 	// setting for all long-running services, unless they are involved with system updates or need to
 	// modify the operating system in other ways. If this option is used, ReadWritePaths= may be used to
-	// exclude specific directories from being made read-only. Similar, StateDirectory=, LogsDirectory=,
-	// … and related directory settings (see below) also exclude the specific directories from the effect
-	// of ProtectSystem=. This setting is implied if DynamicUser= is set. This setting cannot ensure
+	// exclude specific directories from being made read-only. Similar, StateDirectory=, LogsDirectory=, …
+	// and related directory settings (see below) also exclude the specific directories from the effect of
+	// ProtectSystem=. This setting is implied if DynamicUser= is set. This setting cannot ensure
 	// protection in all cases. In general it has the same limitations as ReadOnlyPaths=, see below.
 	// Defaults to off.
 	//
@@ -2482,19 +2480,19 @@ type ServiceBlock struct {
 	RestartMaxDelaySec int `hcl:"restart_max_delay_sec,optional" systemd:"RestartMaxDelaySec"`
 	// Takes a string value that specifies how a service should restart: <itemizedlist> <listitem> <para>If
 	// set to normal (the default), the service restarts by going through a failed/inactive state.</para>
-	// <xi:include href="version-info.xml" xpointer="v254"/> </listitem> <listitem> <para>If set to direct,
-	// the service transitions to the activating state directly during auto-restart, skipping
+	// <ns0:include href="version-info.xml" xpointer="v254" /> </listitem> <listitem> <para>If set to
+	// direct, the service transitions to the activating state directly during auto-restart, skipping
 	// failed/inactive state. ExecStopPost= is still invoked. OnSuccess= and OnFailure= are skipped.</para>
 	// <para>This option is useful in cases where a dependency can fail temporarily but we do not want
 	// these temporary failures to make the dependent units fail. Dependent units are not notified of these
-	// temporary failures.</para> <xi:include href="version-info.xml" xpointer="v254"/> </listitem>
+	// temporary failures.</para> <ns0:include href="version-info.xml" xpointer="v254" /> </listitem>
 	// <listitem> <para>If set to debug, the service manager will log messages that are related to this
 	// unit at debug level while automated restarts are attempted, until either the service hits the rate
 	// limit or it succeeds, and the $DEBUG_INVOCATION=1 environment variable will be set for the unit.
 	// This is useful to be able to get additional information when a service fails to start, without
 	// needing to proactively or permanently enable debug level logging in systemd, which is very verbose.
-	// This is otherwise equivalent to normal mode.</para> <xi:include href="version-info.xml"
-	// xpointer="v257"/> </listitem> </itemizedlist>
+	// This is otherwise equivalent to normal mode.</para> <ns0:include href="version-info.xml"
+	// xpointer="v257" /> </listitem> </itemizedlist>
 	RestartMode string `hcl:"restart_mode,optional" systemd:"RestartMode"`
 	// Takes a list of exit status definitions that, when returned by the main service process, will
 	// prevent automatic service restarts, regardless of the restart setting configured with Restart=. Exit
@@ -2535,7 +2533,7 @@ type ServiceBlock struct {
 	// Restricts the set of socket address families accessible to the processes of this unit. Takes none,
 	// or a space-separated list of address family names to allow-list, such as AF_UNIX, AF_INET or
 	// AF_INET6, see <citerefentry
-	// project='man-pages'><refentrytitle>address_families</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>address_families</refentrytitle><manvolnum>7</manvolnum></citerefentry>
 	// for all possible options. When none is specified, then all address families will be denied. When
 	// prefixed with ~ the listed address families will be applied as deny list, otherwise as allow list.
 	//
@@ -2550,13 +2548,13 @@ type ServiceBlock struct {
 	// <citerefentry><refentrytitle>syslog</refentrytitle><manvolnum>2</manvolnum></citerefentry> logging.
 	//
 	// Note that this restricts access to the <citerefentry
-	// project='man-pages'><refentrytitle>socket</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>socket</refentrytitle><manvolnum>2</manvolnum></citerefentry>
 	// system call only. Sockets passed into the process by other means (for example, by using socket
 	// activation with socket units, see
 	// <citerefentry><refentrytitle>systemd.socket</refentrytitle><manvolnum>5</manvolnum></citerefentry>)
 	// are unaffected. Also, sockets created with <function>socketpair()</function> (which creates
 	// connected AF_UNIX sockets) or the <citerefentry
-	// project='man-pages'><refentrytitle>io_uring</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>io_uring</refentrytitle><manvolnum>7</manvolnum></citerefentry>
 	// functions, are not affected. Thus, it is recommended to combined this setting with
 	// SystemCallFilter=@service, to only allow a limited subset of system calls.
 	//
@@ -2570,7 +2568,7 @@ type ServiceBlock struct {
 	RestrictFileSystems     []string `hcl:"restrict_file_systems,optional" systemd:"RestrictFileSystems"`
 	// Restricts access to Linux namespace functionality for the processes of this unit. For details about
 	// Linux namespaces, see <citerefentry
-	// project='man-pages'><refentrytitle>namespaces</refentrytitle><manvolnum>7</manvolnum></citerefentry>.
+	// project="man-pages"><refentrytitle>namespaces</refentrytitle><manvolnum>7</manvolnum></citerefentry>.
 	// Either takes a boolean argument, or a space-separated list of namespace type identifiers. If false
 	// (the default), no restrictions on namespace creation and switching are made. If true, access to any
 	// kind of namespacing is prohibited. Otherwise, a space-separated list of namespace type identifiers
@@ -2585,9 +2583,9 @@ type ServiceBlock struct {
 	// <citerefentry><refentrytitle>unshare</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry><refentrytitle>clone</refentrytitle><manvolnum>2</manvolnum></citerefentry> and
 	// <citerefentry><refentrytitle>setns</refentrytitle><manvolnum>2</manvolnum></citerefentry> system
-	// calls, taking the specified flags parameters into account. Note that — if this option is used —
-	// in addition to restricting creation and switching of the specified types of namespaces (or all of
-	// them, if true) access to the <function>setns()</function> system call with a zero flags parameter is
+	// calls, taking the specified flags parameters into account. Note that — if this option is used — in
+	// addition to restricting creation and switching of the specified types of namespaces (or all of them,
+	// if true) access to the <function>setns()</function> system call with a zero flags parameter is
 	// prohibited. This setting is only supported on x86, x86-64, mips, mips-le, mips64, mips64-le,
 	// mips64-n32, mips64-le-n32, ppc64, ppc64-le, s390 and s390x, and enforces no restrictions on other
 	// architectures.
@@ -2602,7 +2600,7 @@ type ServiceBlock struct {
 	// Takes a boolean argument. If set, any attempts to enable realtime scheduling in a process of the
 	// unit are refused. This restricts access to realtime task scheduling policies such as SCHED_FIFO,
 	// SCHED_RR or SCHED_DEADLINE. See <citerefentry
-	// project='man-pages'><refentrytitle>sched</refentrytitle><manvolnum>7</manvolnum></citerefentry> for
+	// project="man-pages"><refentrytitle>sched</refentrytitle><manvolnum>7</manvolnum></citerefentry> for
 	// details about these scheduling policies. Realtime scheduling policies may be used to monopolize CPU
 	// time for longer periods of time, and may hence be used to lock up or otherwise trigger
 	// Denial-of-Service situations on the system. It is hence recommended to restrict access to realtime
@@ -2610,7 +2608,7 @@ type ServiceBlock struct {
 	RestrictRealtime bool `hcl:"restrict_realtime,optional" systemd:"RestrictRealtime"`
 	// Takes a boolean argument. If set, any attempts to set the set-user-ID (SUID) or set-group-ID (SGID)
 	// bits on files or directories will be denied (for details on these bits see <citerefentry
-	// project='man-pages'><refentrytitle>inode</refentrytitle><manvolnum>7</manvolnum></citerefentry>). As
+	// project="man-pages"><refentrytitle>inode</refentrytitle><manvolnum>7</manvolnum></citerefentry>). As
 	// the SUID/SGID bits are mechanisms to elevate privileges, and allow users to acquire the identity of
 	// other users, it is recommended to restrict creation of SUID/SGID files to the few programs that
 	// actually require them. Note that this restricts marking of any type of file system object with these
@@ -2624,9 +2622,9 @@ type ServiceBlock struct {
 	RestrictSUIDSGID bool `hcl:"restrict_suidsgid,optional" systemd:"RestrictSUIDSGID"`
 	// Takes a directory path relative to the host's root directory (i.e. the root of the system running
 	// the service manager). Sets the root directory for executed processes, with the <citerefentry
-	// project='man-pages'><refentrytitle>pivot_root</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>pivot_root</refentrytitle><manvolnum>2</manvolnum></citerefentry>
 	// or <citerefentry
-	// project='man-pages'><refentrytitle>chroot</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>chroot</refentrytitle><manvolnum>2</manvolnum></citerefentry>
 	// system call. If this is used, it must be ensured that the process binary and all its auxiliary files
 	// are available in the new root. Note that setting this parameter might result in additional
 	// dependencies to be added to the unit (see above).
@@ -2666,8 +2664,8 @@ type ServiceBlock struct {
 	//
 	// To make sure making ephemeral copies can be made efficiently, the root directory or root image
 	// should be located on the same filesystem as /var/lib/systemd/ephemeral-trees/. When using
-	// RootEphemeral= with root directories, <citerefentry project='url'><refentrytitle
-	// url='https://btrfs.readthedocs.io/en/latest/btrfs-man5.html'>btrfs</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+	// RootEphemeral= with root directories, <citerefentry project="url"><refentrytitle
+	// url="https://btrfs.readthedocs.io/en/latest/btrfs-man5.html">btrfs</refentrytitle><manvolnum>5</manvolnum></citerefentry>
 	// should be used as the filesystem and the root directory should ideally be a subvolume which systemd
 	// can snapshot to make the ephemeral copy. For root images, a filesystem with support for reflinks
 	// should be used to ensure an efficient ephemeral copy.
@@ -2680,7 +2678,7 @@ type ServiceBlock struct {
 	// bits (and hence 64 formatted hexadecimal characters) long (in case of SHA256 for example). If this
 	// option is not specified, but the image file carries the user.verity.roothash extended file attribute
 	// (see <citerefentry
-	// project='man-pages'><refentrytitle>xattr</refentrytitle><manvolnum>7</manvolnum></citerefentry>),
+	// project="man-pages"><refentrytitle>xattr</refentrytitle><manvolnum>7</manvolnum></citerefentry>),
 	// then the root hash is read from it, also as formatted hexadecimal characters. If the extended file
 	// attribute is not found (or is not supported by the underlying file system), but a file with the
 	// .roothash suffix is found next to the image file, bearing otherwise the same name (except if the
@@ -2738,7 +2736,7 @@ type ServiceBlock struct {
 	// multiple partitions, otherwise partition name root is implied. Options for multiple partitions can
 	// be specified in a single line with space separators. Assigning an empty string removes previous
 	// assignments. For a list of valid mount options, please refer to <citerefentry
-	// project='man-pages'><refentrytitle>mount</refentrytitle><manvolnum>8</manvolnum></citerefentry>.
+	// project="man-pages"><refentrytitle>mount</refentrytitle><manvolnum>8</manvolnum></citerefentry>.
 	//
 	// Valid partition names follow the <ulink
 	// url="https://uapi-group.org/specifications/specs/discoverable_partitions_specification">
@@ -2783,7 +2781,7 @@ type ServiceBlock struct {
 	// Specifies the access mode of the directories specified in RuntimeDirectory=, StateDirectory=,
 	// CacheDirectory=, LogsDirectory=, or ConfigurationDirectory=, respectively, as an octal number.
 	// Defaults to 0755. See "Permissions" in <citerefentry
-	// project='man-pages'><refentrytitle>path_resolution</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>path_resolution</refentrytitle><manvolnum>7</manvolnum></citerefentry>
 	// for a discussion of the meaning of permission bits.
 	RuntimeDirectoryMode os.FileMode `unitd:"runtime_directory_mode,optional" systemd:"RuntimeDirectoryMode"`
 	// Takes a boolean argument or restart. If set to no (the default), the directories specified in
@@ -2827,7 +2825,7 @@ type ServiceBlock struct {
 	// be ignored, but it is still possible that the subsequent <function>execve()</function> may fail if
 	// the policy does not allow the transition for the non-overridden context. This does not affect
 	// commands prefixed with +. See <citerefentry
-	// project='die-net'><refentrytitle>setexeccon</refentrytitle><manvolnum>3</manvolnum></citerefentry>
+	// project="die-net"><refentrytitle>setexeccon</refentrytitle><manvolnum>3</manvolnum></citerefentry>
 	// for details.
 	SELinuxContext string `hcl:"se_linux_context,optional" systemd:"SELinuxContext"`
 	// Controls the secure bits set for the executed process. Takes a space-separated combination of
@@ -2835,7 +2833,7 @@ type ServiceBlock struct {
 	// no-setuid-fixup-locked, noroot, and noroot-locked. This option may appear more than once, in which
 	// case the secure bits are ORed. If the empty string is assigned to this option, the bits are reset to
 	// 0. This does not affect commands prefixed with +. See <citerefentry
-	// project='man-pages'><refentrytitle>capabilities</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>capabilities</refentrytitle><manvolnum>7</manvolnum></citerefentry>
 	// for details.
 	SecureBits string `hcl:"secure_bits,optional" systemd:"SecureBits"`
 	// Specifies whether to send SIGHUP to remaining processes immediately after sending the signal
@@ -2973,7 +2971,7 @@ type ServiceBlock struct {
 	// for details) to have Accept=yes set, or to specify a single socket only. If this option is set,
 	// standard input will be connected to the socket the service was activated from, which is primarily
 	// useful for compatibility with daemons designed for use with the traditional <citerefentry
-	// project='freebsd'><refentrytitle>inetd</refentrytitle><manvolnum>8</manvolnum></citerefentry> socket
+	// project="freebsd"><refentrytitle>inetd</refentrytitle><manvolnum>8</manvolnum></citerefentry> socket
 	// activation daemon ($LISTEN_FDS (and related) environment variables are not passed when socket value
 	// is configured).
 	//
@@ -3069,7 +3067,7 @@ type ServiceBlock struct {
 	// use when logging shall be processed with such a daemon.)
 	//
 	// kmsg connects standard output with the kernel log buffer which is accessible via <citerefentry
-	// project='man-pages'><refentrytitle>dmesg</refentrytitle><manvolnum>1</manvolnum></citerefentry>, in
+	// project="man-pages"><refentrytitle>dmesg</refentrytitle><manvolnum>1</manvolnum></citerefentry>, in
 	// addition to the journal. The journal daemon might be configured to send all logs to kmsg anyway, in
 	// which case this option is no different from journal.
 	//
@@ -3115,7 +3113,7 @@ type ServiceBlock struct {
 	// this case, stdout (or stderr, see below) will be an AF_UNIX stream socket, and not a pipe or FIFO
 	// that can be reopened. This means when executing shell scripts the construct echo "hello" &gt;
 	// /dev/stderr for writing text to stderr will not work. To mitigate this use the construct echo
-	// "hello" >&amp;2 instead, which is mostly equivalent and avoids this pitfall.
+	// "hello" &gt;&amp;2 instead, which is mostly equivalent and avoids this pitfall.
 	//
 	// If StandardInput= is set to one of tty, tty-force, tty-fail, socket, or fd:name, this setting
 	// defaults to inherit.
@@ -3152,7 +3150,7 @@ type ServiceBlock struct {
 	// Specifies the access mode of the directories specified in RuntimeDirectory=, StateDirectory=,
 	// CacheDirectory=, LogsDirectory=, or ConfigurationDirectory=, respectively, as an octal number.
 	// Defaults to 0755. See "Permissions" in <citerefentry
-	// project='man-pages'><refentrytitle>path_resolution</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>path_resolution</refentrytitle><manvolnum>7</manvolnum></citerefentry>
 	// for a discussion of the meaning of permission bits.
 	StateDirectoryMode os.FileMode `unitd:"state_directory_mode,optional" systemd:"StateDirectoryMode"`
 	// Specifies the storage limits for the directories specified in StateDirectory=, CacheDirectory=, or
@@ -3181,7 +3179,7 @@ type ServiceBlock struct {
 	// <citerefentry><refentrytitle>systemd.exec</refentrytitle><manvolnum>5</manvolnum></citerefentry> for
 	// a list of termination status names (for this setting only the part without the EXIT_ or EX_ prefix
 	// should be used). See <citerefentry
-	// project='man-pages'><refentrytitle>signal</refentrytitle><manvolnum>7</manvolnum></citerefentry> for
+	// project="man-pages"><refentrytitle>signal</refentrytitle><manvolnum>7</manvolnum></citerefentry> for
 	// a list of signal names.
 	//
 	// Note that this setting does not change the mapping between numeric exit statuses and their names,
@@ -3208,7 +3206,7 @@ type ServiceBlock struct {
 	// Sets the syslog facility identifier to use when logging. One of kern, user, mail, daemon, auth,
 	// syslog, lpr, news, uucp, cron, authpriv, ftp, local0, local1, local2, local3, local4, local5, local6
 	// or local7. See <citerefentry
-	// project='man-pages'><refentrytitle>syslog</refentrytitle><manvolnum>3</manvolnum></citerefentry> for
+	// project="man-pages"><refentrytitle>syslog</refentrytitle><manvolnum>3</manvolnum></citerefentry> for
 	// details. This option is only useful when StandardOutput= or StandardError= are set to journal or
 	// kmsg (or to the same settings in combination with +console), and only applies to log messages
 	// written to stdout or stderr. Defaults to daemon.
@@ -3220,7 +3218,7 @@ type ServiceBlock struct {
 	SyslogIdentifier string `hcl:"syslog_identifier,optional" systemd:"SyslogIdentifier"`
 	// The default syslog log level to use when logging to the logging system or the kernel log buffer. One
 	// of emerg, alert, crit, err, warning, notice, info, debug. See <citerefentry
-	// project='man-pages'><refentrytitle>syslog</refentrytitle><manvolnum>3</manvolnum></citerefentry> for
+	// project="man-pages"><refentrytitle>syslog</refentrytitle><manvolnum>3</manvolnum></citerefentry> for
 	// details. This option is only useful when StandardOutput= or StandardError= are set to journal or
 	// kmsg (or to the same settings in combination with +console), and only applies to log messages
 	// written to stdout or stderr. Note that individual lines output by executed processes may be prefixed
@@ -3253,11 +3251,10 @@ type ServiceBlock struct {
 	//
 	// System call filtering is not equally effective on all architectures. For example, on x86 filtering
 	// of network socket-related calls is not possible, due to ABI limitations — a limitation that x86-64
-	// does not have, however. On systems supporting multiple ABIs at the same time — such as x86/x86-64
-	// — it is hence recommended to limit the set of permitted system call architectures so that
-	// secondary ABIs may not be used to circumvent the restrictions applied to the native ABI of the
-	// system. In particular, setting SystemCallArchitectures=native is a good choice for disabling
-	// non-native ABIs.
+	// does not have, however. On systems supporting multiple ABIs at the same time — such as x86/x86-64 —
+	// it is hence recommended to limit the set of permitted system call architectures so that secondary
+	// ABIs may not be used to circumvent the restrictions applied to the native ABI of the system. In
+	// particular, setting SystemCallArchitectures=native is a good choice for disabling non-native ABIs.
 	//
 	// System call architectures may also be restricted system-wide via the SystemCallArchitectures= option
 	// in the global configuration. See
@@ -3268,7 +3265,7 @@ type ServiceBlock struct {
 	// Takes an errno error number (between 1 and 4095) or errno name such as EPERM, EACCES or EUCLEAN, to
 	// return when the system call filter configured with SystemCallFilter= is triggered, instead of
 	// terminating the process immediately. See <citerefentry
-	// project='man-pages'><refentrytitle>errno</refentrytitle><manvolnum>3</manvolnum></citerefentry> for
+	// project="man-pages"><refentrytitle>errno</refentrytitle><manvolnum>3</manvolnum></citerefentry> for
 	// a full list of error codes. When this setting is not used, or when the empty string or the special
 	// setting kill is assigned, the process will be terminated immediately when the filter is triggered.
 	SystemCallErrorNumber string `hcl:"system_call_error_number,optional" systemd:"SystemCallErrorNumber"`
@@ -3317,135 +3314,135 @@ type ServiceBlock struct {
 	//
 	// As the number of possible system calls is large, predefined groups of system calls are provided. A
 	// group starts with @ character, followed by name of the set. <table> <title>Currently predefined
-	// system call sets</title> <tgroup cols='2'> <colspec colname='set' /> <colspec colname='description'
+	// system call sets</title> <tgroup cols="2"> <colspec colname="set" /> <colspec colname="description"
 	// /> <thead> <row> <entry>Set</entry> <entry>Description</entry> </row> </thead> <tbody> <row>
 	// <entry>@aio</entry> <entry>Asynchronous I/O (<citerefentry
-	// project='man-pages'><refentrytitle>io_setup</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>io_setup</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>io_submit</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>io_submit</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// and related calls)</entry> </row> <row> <entry>@basic-io</entry> <entry>System calls for basic I/O:
 	// reading, writing, seeking, file descriptor duplication and closing (<citerefentry
-	// project='man-pages'><refentrytitle>read</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>read</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>write</refentrytitle><manvolnum>2</manvolnum></citerefentry>, and
+	// project="man-pages"><refentrytitle>write</refentrytitle><manvolnum>2</manvolnum></citerefentry>, and
 	// related calls)</entry> </row> <row> <entry>@chown</entry> <entry>Changing file ownership
 	// (<citerefentry
-	// project='man-pages'><refentrytitle>chown</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>chown</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>fchownat</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>fchownat</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// and related calls)</entry> </row> <row> <entry>@clock</entry> <entry>System calls for changing the
 	// system clock (<citerefentry
-	// project='man-pages'><refentrytitle>adjtimex</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>adjtimex</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>settimeofday</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>settimeofday</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// and related calls)</entry> </row> <row> <entry>@cpu-emulation</entry> <entry>System calls for CPU
 	// emulation functionality (<citerefentry
-	// project='man-pages'><refentrytitle>vm86</refentrytitle><manvolnum>2</manvolnum></citerefentry> and
+	// project="man-pages"><refentrytitle>vm86</refentrytitle><manvolnum>2</manvolnum></citerefentry> and
 	// related calls)</entry> </row> <row> <entry>@debug</entry> <entry>Debugging, performance monitoring
 	// and tracing functionality (<citerefentry
-	// project='man-pages'><refentrytitle>ptrace</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>ptrace</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>perf_event_open</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>perf_event_open</refentrytitle><manvolnum>2</manvolnum></citerefentry>
 	// and related calls)</entry> </row> <row> <entry>@file-system</entry> <entry>File system operations:
 	// opening, creating files and directories for read and write, renaming and removing them, reading file
 	// properties, or creating hard and symbolic links</entry> </row> <row> <entry>@io-event</entry>
 	// <entry>Event loop system calls (<citerefentry
-	// project='man-pages'><refentrytitle>poll</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>poll</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>select</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>select</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>epoll</refentrytitle><manvolnum>7</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>epoll</refentrytitle><manvolnum>7</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>eventfd</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>eventfd</refentrytitle><manvolnum>2</manvolnum></citerefentry>
 	// and related calls)</entry> </row> <row> <entry>@ipc</entry> <entry>Pipes, SysV IPC, POSIX Message
 	// Queues and other IPC (<citerefentry
-	// project='man-pages'><refentrytitle>mq_overview</refentrytitle><manvolnum>7</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>mq_overview</refentrytitle><manvolnum>7</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>svipc</refentrytitle><manvolnum>7</manvolnum></citerefentry>)</entry>
+	// project="man-pages"><refentrytitle>svipc</refentrytitle><manvolnum>7</manvolnum></citerefentry>)</entry>
 	// </row> <row> <entry>@keyring</entry> <entry>Kernel keyring access (<citerefentry
-	// project='man-pages'><refentrytitle>keyctl</refentrytitle><manvolnum>2</manvolnum></citerefentry> and
+	// project="man-pages"><refentrytitle>keyctl</refentrytitle><manvolnum>2</manvolnum></citerefentry> and
 	// related calls)</entry> </row> <row> <entry>@memlock</entry> <entry>Locking of memory in RAM
 	// (<citerefentry
-	// project='man-pages'><refentrytitle>mlock</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>mlock</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>mlockall</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>mlockall</refentrytitle><manvolnum>2</manvolnum></citerefentry>
 	// and related calls)</entry> </row> <row> <entry>@module</entry> <entry>Loading and unloading of
 	// kernel modules (<citerefentry
-	// project='man-pages'><refentrytitle>init_module</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>init_module</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>delete_module</refentrytitle><manvolnum>2</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>delete_module</refentrytitle><manvolnum>2</manvolnum></citerefentry>
 	// and related calls)</entry> </row> <row> <entry>@mount</entry> <entry>Mounting and unmounting of file
 	// systems (<citerefentry
-	// project='man-pages'><refentrytitle>mount</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>mount</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>chroot</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>chroot</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// and related calls)</entry> </row> <row> <entry>@network-io</entry> <entry>Socket I/O (including
 	// local AF_UNIX): <citerefentry
-	// project='man-pages'><refentrytitle>socket</refentrytitle><manvolnum>7</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>socket</refentrytitle><manvolnum>7</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>unix</refentrytitle><manvolnum>7</manvolnum></citerefentry></entry>
+	// project="man-pages"><refentrytitle>unix</refentrytitle><manvolnum>7</manvolnum></citerefentry></entry>
 	// </row> <row> <entry>@obsolete</entry> <entry>Unusual, obsolete or unimplemented (<citerefentry
-	// project='man-pages'><refentrytitle>create_module</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>create_module</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>gtty</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>gtty</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// …)</entry> </row> <row> <entry>@pkey</entry> <entry>System calls that deal with memory protection
 	// keys (<citerefentry
-	// project='man-pages'><refentrytitle>pkeys</refentrytitle><manvolnum>7</manvolnum></citerefentry>)</entry>
+	// project="man-pages"><refentrytitle>pkeys</refentrytitle><manvolnum>7</manvolnum></citerefentry>)</entry>
 	// </row> <row> <entry>@privileged</entry> <entry>All system calls which need super-user capabilities
 	// (<citerefentry
-	// project='man-pages'><refentrytitle>capabilities</refentrytitle><manvolnum>7</manvolnum></citerefentry>)</entry>
+	// project="man-pages"><refentrytitle>capabilities</refentrytitle><manvolnum>7</manvolnum></citerefentry>)</entry>
 	// </row> <row> <entry>@process</entry> <entry>Process control, execution, namespacing operations
 	// (<citerefentry
-	// project='man-pages'><refentrytitle>clone</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>clone</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>kill</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>kill</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>namespaces</refentrytitle><manvolnum>7</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>namespaces</refentrytitle><manvolnum>7</manvolnum></citerefentry>,
 	// …)</entry> </row> <row> <entry>@raw-io</entry> <entry>Raw I/O port access (<citerefentry
-	// project='man-pages'><refentrytitle>ioperm</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>ioperm</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>iopl</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
-	// <function>pciconfig_read()</function>, …)</entry> </row> <row> <entry>@reboot</entry>
-	// <entry>System calls for rebooting and reboot preparation (<citerefentry
-	// project='man-pages'><refentrytitle>reboot</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
-	// <function>kexec()</function>, …)</entry> </row> <row> <entry>@resources</entry> <entry>System
-	// calls for changing resource limits, memory and scheduling parameters (<citerefentry
-	// project='man-pages'><refentrytitle>setrlimit</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>iopl</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <function>pciconfig_read()</function>, …)</entry> </row> <row> <entry>@reboot</entry> <entry>System
+	// calls for rebooting and reboot preparation (<citerefentry
+	// project="man-pages"><refentrytitle>reboot</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// <function>kexec()</function>, …)</entry> </row> <row> <entry>@resources</entry> <entry>System calls
+	// for changing resource limits, memory and scheduling parameters (<citerefentry
+	// project="man-pages"><refentrytitle>setrlimit</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>setpriority</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>setpriority</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// …)</entry> </row> <row> <entry>@sandbox</entry> <entry>System calls for sandboxing programs
 	// (<citerefentry
-	// project='man-pages'><refentrytitle>seccomp</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>seccomp</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// Landlock system calls, …)</entry> </row> <row> <entry>@setuid</entry> <entry>System calls for
 	// changing user ID and group ID credentials, (<citerefentry
-	// project='man-pages'><refentrytitle>setuid</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>setuid</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>setgid</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>setgid</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>setresuid</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>setresuid</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// …)</entry> </row> <row> <entry>@signal</entry> <entry>System calls for manipulating and handling
 	// process signals (<citerefentry
-	// project='man-pages'><refentrytitle>signal</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>signal</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>sigprocmask</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
-	// …)</entry> </row> <row> <entry>@swap</entry> <entry>System calls for enabling/disabling swap
-	// devices (<citerefentry
-	// project='man-pages'><refentrytitle>swapon</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>sigprocmask</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// …)</entry> </row> <row> <entry>@swap</entry> <entry>System calls for enabling/disabling swap devices
+	// (<citerefentry
+	// project="man-pages"><refentrytitle>swapon</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>swapoff</refentrytitle><manvolnum>2</manvolnum></citerefentry>)</entry>
+	// project="man-pages"><refentrytitle>swapoff</refentrytitle><manvolnum>2</manvolnum></citerefentry>)</entry>
 	// </row> <row> <entry>@sync</entry> <entry>Synchronizing files and memory to disk (<citerefentry
-	// project='man-pages'><refentrytitle>fsync</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>fsync</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>msync</refentrytitle><manvolnum>2</manvolnum></citerefentry>, and
+	// project="man-pages"><refentrytitle>msync</refentrytitle><manvolnum>2</manvolnum></citerefentry>, and
 	// related calls)</entry> </row> <row> <entry>@system-service</entry> <entry>A reasonable set of system
 	// calls used by common system services, excluding any special purpose calls. This is the recommended
 	// starting point for allow-listing system calls for system services, as it contains what is typically
 	// needed by system services, but excludes overly specific interfaces. For example, the following APIs
 	// are excluded: @clock, @mount, @swap, @reboot.</entry> </row> <row> <entry>@timer</entry>
 	// <entry>System calls for scheduling operations by time (<citerefentry
-	// project='man-pages'><refentrytitle>alarm</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>alarm</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// <citerefentry
-	// project='man-pages'><refentrytitle>timer_create</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
+	// project="man-pages"><refentrytitle>timer_create</refentrytitle><manvolnum>2</manvolnum></citerefentry>,
 	// …)</entry> </row> <row> <entry>@known</entry> <entry>All system calls defined by the kernel. This
 	// list is defined statically in systemd based on a kernel version that was available when this systemd
 	// version was released. It will become progressively more out-of-date as the kernel is
@@ -3553,8 +3550,8 @@ type ServiceBlock struct {
 	// kernel to write a core dump) it can send EXTEND_TIMEOUT_USEC=… to extended the abort time beyond
 	// TimeoutAbortSec=. The first receipt of this message must occur before TimeoutAbortSec= is exceeded,
 	// and once the abort time has extended beyond TimeoutAbortSec=, the service manager will allow the
-	// service to continue to abort, provided the service repeats EXTEND_TIMEOUT_USEC=… within the
-	// interval specified, or terminates itself (see
+	// service to continue to abort, provided the service repeats EXTEND_TIMEOUT_USEC=… within the interval
+	// specified, or terminates itself (see
 	// <citerefentry><refentrytitle>sd_notify</refentrytitle><manvolnum>3</manvolnum></citerefentry>).
 	//
 	TimeoutAbortSec int `hcl:"timeout_abort_sec,optional" systemd:"TimeoutAbortSec"`
@@ -3588,12 +3585,12 @@ type ServiceBlock struct {
 	// timeout is disabled by default (see
 	// <citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>).
 	//
-	// If a service of Type=notify/Type=notify-reload sends EXTEND_TIMEOUT_USEC=…, this may cause the
-	// start time to be extended beyond TimeoutStartSec=. The first receipt of this message must occur
-	// before TimeoutStartSec= is exceeded, and once the start time has extended beyond TimeoutStartSec=,
-	// the service manager will allow the service to continue to start, provided the service repeats
-	// EXTEND_TIMEOUT_USEC=… within the interval specified until the service startup status is finished
-	// by READY=1. (see
+	// If a service of Type=notify/Type=notify-reload sends EXTEND_TIMEOUT_USEC=…, this may cause the start
+	// time to be extended beyond TimeoutStartSec=. The first receipt of this message must occur before
+	// TimeoutStartSec= is exceeded, and once the start time has extended beyond TimeoutStartSec=, the
+	// service manager will allow the service to continue to start, provided the service repeats
+	// EXTEND_TIMEOUT_USEC=… within the interval specified until the service startup status is finished by
+	// READY=1. (see
 	// <citerefentry><refentrytitle>sd_notify</refentrytitle><manvolnum>3</manvolnum></citerefentry>).
 	//
 	// Note that the start timeout is also applied to service reloads, regardless of whether implemented
@@ -3629,8 +3626,8 @@ type ServiceBlock struct {
 	// (see
 	// <citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>).
 	//
-	// If a service of Type=notify/Type=notify-reload sends EXTEND_TIMEOUT_USEC=…, this may cause the
-	// stop time to be extended beyond TimeoutStopSec=. The first receipt of this message must occur before
+	// If a service of Type=notify/Type=notify-reload sends EXTEND_TIMEOUT_USEC=…, this may cause the stop
+	// time to be extended beyond TimeoutStopSec=. The first receipt of this message must occur before
 	// TimeoutStopSec= is exceeded, and once the stop time has extended beyond TimeoutStopSec=, the service
 	// manager will allow the service to continue to stop, provided the service repeats
 	// EXTEND_TIMEOUT_USEC=… within the interval specified, or terminates itself (see
@@ -3653,8 +3650,8 @@ type ServiceBlock struct {
 	// <function>execve()</function>) and does not allow ordering of other units against completion of
 	// initialization of the service code itself (which for example is useful if clients need to connect to
 	// the service through some form of IPC, and the IPC channel is only established by the service itself
-	// — in contrast to doing this ahead of time through socket or bus activation or similar), it might
-	// not be sufficient for many cases. If so, notify, notify-reload, or dbus (the latter only in case the
+	// — in contrast to doing this ahead of time through socket or bus activation or similar), it might not
+	// be sufficient for many cases. If so, notify, notify-reload, or dbus (the latter only in case the
 	// service provides a D-Bus interface) are the preferred options as they allow service program code to
 	// precisely schedule when to consider the service started up successfully and when to proceed with
 	// follow-up units. The notify/notify-reload service types require explicit support in the service
@@ -3684,7 +3681,7 @@ type ServiceBlock struct {
 	// <citerefentry><refentrytitle>systemd-homed.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>
 	// this field may be controlled via homectl --umask=). It may also be set via a PAM module, such as
 	// <citerefentry
-	// project='man-pages'><refentrytitle>pam_umask</refentrytitle><manvolnum>8</manvolnum></citerefentry>.
+	// project="man-pages"><refentrytitle>pam_umask</refentrytitle><manvolnum>8</manvolnum></citerefentry>.
 	UMask os.FileMode `unitd:"u_mask,optional" systemd:"UMask"`
 	// Configure the location of a file containing <ulink
 	// url="https://docs.kernel.org/usb/functionfs.html">USB FunctionFS</ulink> descriptors, for
@@ -3712,7 +3709,7 @@ type ServiceBlock struct {
 	//
 	// See "Environment Variables in Spawned Processes" below for a description of how those settings
 	// combine to form the inherited environment. See <citerefentry
-	// project='man-pages'><refentrytitle>environ</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+	// project="man-pages"><refentrytitle>environ</refentrytitle><manvolnum>7</manvolnum></citerefentry>
 	// for general information about environment variables.
 	//
 	UnsetEnvironment []string `hcl:"unset_environment,optional" systemd:"UnsetEnvironment"`
@@ -3757,10 +3754,10 @@ type ServiceBlock struct {
 	//
 	UserNamespacePath string `hcl:"user_namespace_path,optional" systemd:"UserNamespacePath"`
 	// Takes a four character identifier string for an <citerefentry
-	// project='man-pages'><refentrytitle>utmp</refentrytitle><manvolnum>5</manvolnum></citerefentry> and
+	// project="man-pages"><refentrytitle>utmp</refentrytitle><manvolnum>5</manvolnum></citerefentry> and
 	// wtmp entry for this service. This should only be set for services such as getty implementations
 	// (such as <citerefentry
-	// project='die-net'><refentrytitle>agetty</refentrytitle><manvolnum>8</manvolnum></citerefentry>)
+	// project="die-net"><refentrytitle>agetty</refentrytitle><manvolnum>8</manvolnum></citerefentry>)
 	// where utmp/wtmp entries must be created and cleared before and after execution, or for services that
 	// shall be executed as if they were run by a getty process (see below). If the configured string is
 	// longer than four characters, it is truncated and the terminal four characters are used. This setting
@@ -3768,12 +3765,12 @@ type ServiceBlock struct {
 	// are created or cleaned up for this service.
 	UtmpIdentifier string `hcl:"utmp_identifier,optional" systemd:"UtmpIdentifier"`
 	// Takes one of init, login or user. If UtmpIdentifier= is set, controls which type of <citerefentry
-	// project='man-pages'><refentrytitle>utmp</refentrytitle><manvolnum>5</manvolnum></citerefentry>/wtmp
+	// project="man-pages"><refentrytitle>utmp</refentrytitle><manvolnum>5</manvolnum></citerefentry>/wtmp
 	// entries for this service are generated. This setting has no effect unless UtmpIdentifier= is set
 	// too. If init is set, only an INIT_PROCESS entry is generated and the invoked process must implement
 	// a getty-compatible utmp/wtmp logic. If login is set, first an INIT_PROCESS entry, followed by a
 	// LOGIN_PROCESS entry is generated. In this case, the invoked process must implement a <citerefentry
-	// project='die-net'><refentrytitle>login</refentrytitle><manvolnum>1</manvolnum></citerefentry>-compatible
+	// project="die-net"><refentrytitle>login</refentrytitle><manvolnum>1</manvolnum></citerefentry>-compatible
 	// utmp/wtmp logic. If user is set, first an INIT_PROCESS entry, then a LOGIN_PROCESS entry and finally
 	// a USER_PROCESS entry is generated. In this case, the invoked process may be any process that is
 	// suitable to be run as session leader. Defaults to init.
