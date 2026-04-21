@@ -3213,6 +3213,9 @@ type MountBlock struct {
 type Mount struct {
 	Name string `hcl:"name,label"`
 
+	Template bool              `hcl:"template,optional"`
+	ForEach  map[string]string `hcl:"for_each,optional"`
+
 	Unit    UnitBlock    `hcl:"unit,block"`
 	Mount   MountBlock   `hcl:"mount,block"`
 	Install InstallBlock `hcl:"install,block"`

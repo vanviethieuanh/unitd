@@ -216,6 +216,9 @@ type TimerBlock struct {
 type Timer struct {
 	Name string `hcl:"name,label"`
 
+	Template bool              `hcl:"template,optional"`
+	ForEach  map[string]string `hcl:"for_each,optional"`
+
 	Unit    UnitBlock    `hcl:"unit,block"`
 	Timer   TimerBlock   `hcl:"timer,block"`
 	Install InstallBlock `hcl:"install,block"`

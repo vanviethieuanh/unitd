@@ -1,0 +1,10 @@
+[Unit]
+After=network.target
+After=db.service
+Description=Worker - Email sending
+
+[Service]
+ExecStart=/usr/bin/worker --type email --name %i
+
+[Install]
+WantedBy=multi-user.target

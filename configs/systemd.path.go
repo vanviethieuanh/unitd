@@ -197,6 +197,9 @@ type PathBlock struct {
 type Path struct {
 	Name string `hcl:"name,label"`
 
+	Template bool              `hcl:"template,optional"`
+	ForEach  map[string]string `hcl:"for_each,optional"`
+
 	Unit    UnitBlock    `hcl:"unit,block"`
 	Path    PathBlock    `hcl:"path,block"`
 	Install InstallBlock `hcl:"install,block"`

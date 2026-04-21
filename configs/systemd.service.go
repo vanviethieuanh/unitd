@@ -3811,6 +3811,9 @@ type ServiceBlock struct {
 type Service struct {
 	Name string `hcl:"name,label"`
 
+	Template bool              `hcl:"template,optional"`
+	ForEach  map[string]string `hcl:"for_each,optional"`
+
 	Unit    UnitBlock    `hcl:"unit,block"`
 	Service ServiceBlock `hcl:"service,block"`
 	Install InstallBlock `hcl:"install,block"`

@@ -50,6 +50,9 @@ type AutomountBlock struct {
 type Automount struct {
 	Name string `hcl:"name,label"`
 
+	Template bool              `hcl:"template,optional"`
+	ForEach  map[string]string `hcl:"for_each,optional"`
+
 	Unit      UnitBlock      `hcl:"unit,block"`
 	Automount AutomountBlock `hcl:"automount,block"`
 	Install   InstallBlock   `hcl:"install,block"`

@@ -35,11 +35,12 @@ func main() {
 			log.Fatalf("Failed to encode %s: %s", svc.Name, err)
 		}
 
-		path := filepath.Join(outDir, svc.Name+".service")
-		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-			log.Fatalf("Failed to write %s: %s", path, err)
+		for _, filename := range svc.UnitFilenames() {
+			path := filepath.Join(outDir, filename)
+			if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+				log.Fatalf("Failed to write %s: %s", path, err)
+			}
+			fmt.Println("wrote", path)
 		}
-
-		fmt.Println("wrote", path)
 	}
 }

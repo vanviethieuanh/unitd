@@ -1,0 +1,10 @@
+[Unit]
+After=network.target
+After=db.service
+Description=Worker - Queue processing
+
+[Service]
+ExecStart=/usr/bin/worker --type queue --name %i
+
+[Install]
+WantedBy=multi-user.target

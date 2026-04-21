@@ -3768,6 +3768,9 @@ type SocketBlock struct {
 type Socket struct {
 	Name string `hcl:"name,label"`
 
+	Template bool              `hcl:"template,optional"`
+	ForEach  map[string]string `hcl:"for_each,optional"`
+
 	Unit    UnitBlock    `hcl:"unit,block"`
 	Socket  SocketBlock  `hcl:"socket,block"`
 	Install InstallBlock `hcl:"install,block"`

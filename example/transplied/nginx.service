@@ -1,6 +1,7 @@
 [Unit]
 After=network.target
 After=db.service
+After=worker-queue@q1.service
 Description=NGINX Web
 Wants=network-online.target
 

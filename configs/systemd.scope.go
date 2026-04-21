@@ -163,6 +163,9 @@ type ScopeBlock struct {
 type Scope struct {
 	Name string `hcl:"name,label"`
 
+	Template bool              `hcl:"template,optional"`
+	ForEach  map[string]string `hcl:"for_each,optional"`
+
 	Unit    UnitBlock    `hcl:"unit,block"`
 	Scope   ScopeBlock   `hcl:"scope,block"`
 	Install InstallBlock `hcl:"install,block"`

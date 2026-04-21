@@ -3175,6 +3175,9 @@ type SwapBlock struct {
 type Swap struct {
 	Name string `hcl:"name,label"`
 
+	Template bool              `hcl:"template,optional"`
+	ForEach  map[string]string `hcl:"for_each,optional"`
+
 	Unit    UnitBlock    `hcl:"unit,block"`
 	Swap    SwapBlock    `hcl:"swap,block"`
 	Install InstallBlock `hcl:"install,block"`

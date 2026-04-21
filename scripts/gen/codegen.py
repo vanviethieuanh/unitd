@@ -64,6 +64,9 @@ def generate_unit_code(u: Unit) -> tuple[str, set[str]]:
     struct_lines = [f"type {block_type} struct {{"]
     struct_lines.append(f'\tName string `hcl:"name,label"`')
     struct_lines.append("")
+    struct_lines.append(f'\tTemplate bool              `hcl:"template,optional"`')
+    struct_lines.append(f'\tForEach  map[string]string `hcl:"for_each,optional"`')
+    struct_lines.append("")
     struct_lines.append(f'\tUnit    UnitBlock    `hcl:"unit,block"`')
     if has_block_type:
         struct_lines.append(f'\t{block_type} {sub_block_type} `hcl:"{snake},block"`')
